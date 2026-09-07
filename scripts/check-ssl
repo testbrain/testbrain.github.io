@@ -1,0 +1,275 @@
+#!/bin/bash
+
+# ============================================
+# SSL Certificate Check Script
+# Comprehensive SSL/TLS certificate monitoring
+# ============================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+print_header() {
+    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${WHITE}  $1${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+print_info() {
+    printf "${GREEN}►${NC} ${CYAN}%-20s${NC} %s\n" "$1:" "$2"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+clear
+echo -e "${WHITE}"
+echo "════════════════════════════════════════════════════════════"
+echo "      🔐  SSL CERTIFICATE REPORT                            "
+echo "════════════════════════════════════════════════════════════"
+echo -e "${NC}"
+
+# --------------------------------------------
+# 1. CHECK CERTIFICATES ON DISK
+# --------------------------------------------
+print_header "LOCAL CERTIFICATES"
+
+# Find SSL certificates
+cert_dirs=("/etc/ssl" "/etc/pki" "/etc/letsencrypt" "/usr/local/ssl" "/etc/nginx/ssl" "/etc/apache2/ssl")
+found_certs=0
+
+for dir in "${cert_dirs[@]}"; do
+    if [ -d "$dir" ]; then
+        find "$dir" -name "*.crt" -o -name "*.pem" -o -name "*.cer" 2>/dev/null | while read cert; do
+            echo -e "  ${GREEN}$cert${NC}"
+            found_certs=$((found_certs + 1))
+        done
+    fi
+done
+
+if [ "$found_certs" -eq 0 ]; then
+    print_warning "No SSL certificates found on disk"
+fi
+
+# --------------------------------------------
+# 2. NGINX CERTIFICATES
+# --------------------------------------------
+print_header "NGINX SSL CONFIGURATION"
+
+# Find all SSL certificates in Nginx config
+if [ -d /etc/nginx ]; then
+    echo -e "${CYAN}►${NC} ${WHITE}SSL certificates referenced in Nginx:${NC}"
+    grep -r "ssl_certificate" /etc/nginx/ 2>/dev/null | grep -v "#" | while read line; do
+        cert_path=$(echo "$line" | awk '{print $2}' | sed 's/;//')
+        if [ -f "$cert_path" ]; then
+            echo -e "  ${GREEN}$cert_path${NC}"
+        else
+            echo -e "  ${RED}$cert_path (missing)${NC}"
+        fi
+    done
+else
+    print_warning "Nginx not found"
+fi
+
+# --------------------------------------------
+# 3. APACHE CERTIFICATES
+# --------------------------------------------
+print_header "APACHE SSL CONFIGURATION"
+
+if [ -d /etc/apache2 ] || [ -d /etc/httpd ]; then
+    echo -e "${CYAN}►${NC} ${WHITE}SSL certificates referenced in Apache:${NC}"
+    grep -r "SSLCertificateFile" /etc/apache2/ /etc/httpd/ 2>/dev/null | grep -v "#" | while read line; do
+        cert_path=$(echo "$line" | awk '{print $2}')
+        if [ -f "$cert_path" ]; then
+            echo -e "  ${GREEN}$cert_path${NC}"
+        else
+            echo -e "  ${RED}$cert_path (missing)${NC}"
+        fi
+    done
+else
+    print_warning "Apache not found"
+fi
+
+# --------------------------------------------
+# 4. LETSENCRYPT CERTIFICATES
+# --------------------------------------------
+print_header "LETSENCRYPT CERTIFICATES"
+
+if [ -d /etc/letsencrypt ]; then
+    echo -e "${CYAN}►${NC} ${WHITE}Let's Encrypt certificates:${NC}"
+    for cert in /etc/letsencrypt/live/*/cert.pem 2>/dev/null; do
+        domain=$(echo "$cert" | cut -d/ -f5)
+        if [ -f "$cert" ]; then
+            expiry=$(openssl x509 -enddate -noout -in "$cert" 2>/dev/null | cut -d= -f2)
+            expiry_epoch=$(date -d "$expiry" +%s 2>/dev/null)
+            now_epoch=$(date +%s)
+            days_left=$(( ($expiry_epoch - $now_epoch) / 86400 ))
+            if [ "$days_left" -lt 7 ]; then
+                echo -e "  ${RED}$domain${NC}: ${YELLOW}$days_left days${NC} (EXPIRING SOON)"
+            elif [ "$days_left" -lt 30 ]; then
+                echo -e "  ${YELLOW}$domain${NC}: ${YELLOW}$days_left days${NC}"
+            else
+                echo -e "  ${GREEN}$domain${NC}: ${WHITE}$days_left days${NC}"
+            fi
+        fi
+    done
+else
+    print_warning "Let's Encrypt not found"
+fi
+
+# --------------------------------------------
+# 5. REMOTE SSL CHECK
+# --------------------------------------------
+print_header "REMOTE SSL CERTIFICATES"
+
+# Check certificate for a domain
+check_domain_ssl() {
+    local domain=$1
+    local port=${2:-443}
+    
+    echo -e "\n${CYAN}►${NC} ${WHITE}Checking $domain:$port${NC}"
+    
+    # Get certificate info
+    cert_info=$(echo | openssl s_client -servername "$domain" -connect "$domain:$port" 2>/dev/null | openssl x509 -noout -text 2>/dev/null)
+    
+    if [ -z "$cert_info" ]; then
+        echo -e "  ${RED}Could not connect to $domain:$port${NC}"
+        return
+    fi
+    
+    # Subject
+    subject=$(echo "$cert_info" | grep "Subject:" | sed 's/.*Subject: //')
+    echo -e "  ${GREEN}Subject:${NC} $subject"
+    
+    # Issuer
+    issuer=$(echo "$cert_info" | grep "Issuer:" | sed 's/.*Issuer: //')
+    echo -e "  ${GREEN}Issuer:${NC} $issuer"
+    
+    # Validity
+    not_before=$(echo "$cert_info" | grep "Not Before:" | cut -d: -f2-)
+    not_after=$(echo "$cert_info" | grep "Not After :" | cut -d: -f2-)
+    echo -e "  ${GREEN}Valid from:${NC} $not_before"
+    echo -e "  ${GREEN}Valid to:${NC} $not_after"
+    
+    # Days left
+    expiry_epoch=$(date -d "$not_after" +%s 2>/dev/null)
+    now_epoch=$(date +%s)
+    days_left=$(( ($expiry_epoch - $now_epoch) / 86400 ))
+    
+    if [ "$days_left" -lt 0 ]; then
+        echo -e "  ${RED}⚠ EXPIRED!${NC}"
+    elif [ "$days_left" -lt 7 ]; then
+        echo -e "  ${RED}⚠ Expires in $days_left days (CRITICAL)${NC}"
+    elif [ "$days_left" -lt 30 ]; then
+        echo -e "  ${YELLOW}⚠ Expires in $days_left days${NC}"
+    else
+        echo -e "  ${GREEN}✓ Expires in $days_left days${NC}"
+    fi
+    
+    # Check SAN
+    san=$(echo "$cert_info" | grep -A1 "Subject Alternative Name" | tail -1)
+    if [ -n "$san" ]; then
+        echo -e "  ${GREEN}SAN:${NC} $san"
+    fi
+    
+    # Check certificate chain
+    chain=$(echo | openssl s_client -servername "$domain" -connect "$domain:$port" -showcerts 2>/dev/null | grep -c "BEGIN CERTIFICATE")
+    echo -e "  ${GREEN}Chain length:${NC} $chain certificates"
+}
+
+# Get domains from Nginx config
+domains_to_check=()
+
+# Extract domains from Nginx
+if [ -d /etc/nginx ]; then
+    for config in /etc/nginx/sites-enabled/* /etc/nginx/conf.d/*; do
+        if [ -f "$config" ]; then
+            grep -E "server_name|ssl_certificate" "$config" 2>/dev/null | grep -v "#" | while read line; do
+                if echo "$line" | grep -q "server_name"; then
+                    for domain in $(echo "$line" | awk '{for(i=2;i<=NF;i++) print $i}' | sed 's/;//g'); do
+                        if [ "$domain" != "_" ] && [ "$domain" != "localhost" ]; then
+                            domains_to_check+=("$domain")
+                        fi
+                    done
+                fi
+            done
+        fi
+    done
+fi
+
+# If no domains found, check some common ones
+if [ ${#domains_to_check[@]} -eq 0 ]; then
+    domains_to_check=("google.com" "github.com" "cloudflare.com")
+fi
+
+# Check unique domains
+unique_domains=($(printf "%s\n" "${domains_to_check[@]}" | sort -u))
+
+for domain in "${unique_domains[@]}"; do
+    if [ -n "$domain" ]; then
+        check_domain_ssl "$domain"
+    fi
+done | head -30
+
+# --------------------------------------------
+# 6. SSL/TLS PROTOCOLS
+# --------------------------------------------
+print_header "SSL/TLS PROTOCOL CHECK"
+
+check_protocol() {
+    local domain=$1
+    local protocol=$2
+    
+    if echo | openssl s_client -servername "$domain" -connect "$domain:443" -"$protocol" 2>/dev/null | grep -q "CONNECTED"; then
+        echo -e "  ${GREEN}✓${NC} $protocol supported"
+    else
+        echo -e "  ${RED}✗${NC} $protocol not supported"
+    fi
+}
+
+# Test against first domain
+test_domain=$(echo "${unique_domains[0]}" | tr -d '\r')
+echo -e "${CYAN}►${NC} ${WHITE}Testing protocols against $test_domain:${NC}"
+
+for proto in ssl2 ssl3 tls1 tls1_1 tls1_2 tls1_3; do
+    check_protocol "$test_domain" "$proto"
+done
+
+# --------------------------------------------
+# 7. SSL RECOMMENDATIONS
+# --------------------------------------------
+print_header "RECOMMENDATIONS"
+
+# Check for expiring certs
+echo -e "${CYAN}►${NC} ${WHITE}Certificates expiring soon:${NC}"
+if [ -d /etc/letsencrypt/live ]; then
+    for cert in /etc/letsencrypt/live/*/cert.pem 2>/dev/null; do
+        domain=$(echo "$cert" | cut -d/ -f5)
+        expiry=$(openssl x509 -enddate -noout -in "$cert" 2>/dev/null | cut -d= -f2)
+        days_left=$(echo $(( ($(date -d "$expiry" +%s) - $(date +%s)) / 86400 )))
+        if [ "$days_left" -lt 30 ]; then
+            echo -e "  ${YELLOW}$domain${NC}: $days_left days left"
+        fi
+    done
+fi
+
+echo -e "\n${WHITE}Best practices:${NC}"
+echo -e "  ${GREEN}→${NC} Use Let's Encrypt for automatic renewal"
+echo -e "  ${GREEN}→${NC} Use strong ciphers (ECDHE+AESGCM)"
+echo -e "  ${GREEN}→${NC} Enable HSTS (HTTP Strict Transport Security)"
+echo -e "  ${GREEN}→${NC} Use TLS 1.2 or higher only"
+echo -e "  ${GREEN}→${NC} Set up monitoring for certificate expiry"
+
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✓ SSL check complete${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"

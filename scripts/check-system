@@ -1,0 +1,504 @@
+#!/bin/bash
+
+# ============================================
+# System Information Script
+# Comprehensive system health and info checker
+# ============================================
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
+
+# Print section header
+print_header() {
+    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${WHITE}  $1${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+# Print info with label
+print_info() {
+    printf "${GREEN}►${NC} ${CYAN}%-20s${NC} %s\n" "$1:" "$2"
+}
+
+# Print warning
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+# Print error
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+# Print success
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+# ============================================
+# MAIN SCRIPT
+# ============================================
+
+clear
+
+echo -e "${WHITE}"
+echo "════════════════════════════════════════════════════════════"
+echo "      🖥️  SYSTEM INFORMATION REPORT                        "
+echo "════════════════════════════════════════════════════════════"
+echo -e "${NC}"
+
+# --------------------------------------------
+# 1. SYSTEM OVERVIEW
+# --------------------------------------------
+print_header "SYSTEM OVERVIEW"
+
+# Hostname
+print_info "Hostname" "$(hostname)"
+
+# OS Distribution
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    print_info "OS" "$NAME $VERSION_ID"
+elif [ -f /etc/redhat-release ]; then
+    print_info "OS" "$(cat /etc/redhat-release)"
+else
+    print_info "OS" "$(uname -s)"
+fi
+
+# Kernel
+print_info "Kernel" "$(uname -r)"
+
+# Architecture
+print_info "Architecture" "$(uname -m)"
+
+# System Uptime
+uptime_seconds=$(awk '{print int($1)}' /proc/uptime)
+days=$((uptime_seconds / 86400))
+hours=$(((uptime_seconds % 86400) / 3600))
+minutes=$(((uptime_seconds % 3600) / 60))
+print_info "Uptime" "${days}d ${hours}h ${minutes}m"
+
+# Current Date/Time
+print_info "Date/Time" "$(date '+%Y-%m-%d %H:%M:%S')"
+
+# Last Boot
+if command -v who &>/dev/null; then
+    last_boot=$(who -b 2>/dev/null | awk '{print $3, $4}')
+    [ -n "$last_boot" ] && print_info "Last Boot" "$last_boot"
+fi
+
+# --------------------------------------------
+# 2. CPU INFORMATION
+# --------------------------------------------
+print_header "CPU INFORMATION"
+
+# CPU Model
+if [ -f /proc/cpuinfo ]; then
+    cpu_model=$(grep "model name" /proc/cpuinfo | head -1 | cut -d: -f2 | sed 's/^ //')
+    print_info "Model" "$cpu_model"
+    
+    cpu_cores=$(grep -c "^processor" /proc/cpuinfo)
+    print_info "Cores" "$cpu_cores"
+    
+    cpu_threads=$(grep -c "^processor" /proc/cpuinfo)
+    print_info "Threads" "$cpu_threads"
+fi
+
+# CPU Frequency
+if [ -f /proc/cpuinfo ]; then
+    cpu_mhz=$(grep "cpu MHz" /proc/cpuinfo | head -1 | cut -d: -f2 | sed 's/^ //' | cut -d. -f1)
+    [ -n "$cpu_mhz" ] && print_info "Frequency" "${cpu_mhz} MHz"
+fi
+
+# CPU Load Average
+load=$(uptime | awk -F'load average:' '{print $2}' | sed 's/^ //')
+print_info "Load Average" "$load"
+
+# CPU Usage
+cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)
+if [ -n "$cpu_usage" ]; then
+    cpu_usage_int=${cpu_usage%.*}
+    if [ "$cpu_usage_int" -lt 50 ]; then
+        print_info "CPU Usage" "${GREEN}${cpu_usage}%${NC}"
+    elif [ "$cpu_usage_int" -lt 80 ]; then
+        print_info "CPU Usage" "${YELLOW}${cpu_usage}%${NC}"
+    else
+        print_info "CPU Usage" "${RED}${cpu_usage}%${NC}"
+    fi
+fi
+
+# CPU Temperature (if available)
+if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
+    temp=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null)
+    if [ -n "$temp" ]; then
+        temp_c=$((temp / 1000))
+        if [ "$temp_c" -lt 60 ]; then
+            print_info "Temperature" "${GREEN}${temp_c}°C${NC}"
+        elif [ "$temp_c" -lt 80 ]; then
+            print_info "Temperature" "${YELLOW}${temp_c}°C${NC}"
+        else
+            print_info "Temperature" "${RED}${temp_c}°C${NC}"
+        fi
+    fi
+fi
+
+# --------------------------------------------
+# 3. MEMORY INFORMATION
+# --------------------------------------------
+print_header "MEMORY INFORMATION"
+
+# Total Memory
+total_mem=$(free -h | awk '/^Mem:/ {print $2}')
+used_mem=$(free -h | awk '/^Mem:/ {print $3}')
+free_mem=$(free -h | awk '/^Mem:/ {print $4}')
+available_mem=$(free -h | awk '/^Mem:/ {print $7}')
+
+print_info "Total" "$total_mem"
+print_info "Used" "$used_mem"
+print_info "Free" "$free_mem"
+print_info "Available" "$available_mem"
+
+# Memory Usage Percentage
+mem_percent=$(free | awk '/^Mem:/ {printf "%.1f", ($3/$2)*100}')
+mem_percent_int=${mem_percent%.*}
+if [ "$mem_percent_int" -lt 50 ]; then
+    print_info "Usage" "${GREEN}${mem_percent}%${NC}"
+elif [ "$mem_percent_int" -lt 80 ]; then
+    print_info "Usage" "${YELLOW}${mem_percent}%${NC}"
+else
+    print_info "Usage" "${RED}${mem_percent}%${NC}"
+fi
+
+# Swap Memory
+swap_total=$(free -h | awk '/^Swap:/ {print $2}')
+swap_used=$(free -h | awk '/^Swap:/ {print $3}')
+swap_free=$(free -h | awk '/^Swap:/ {print $4}')
+if [ "$swap_total" != "0B" ] && [ -n "$swap_total" ]; then
+    print_info "Swap Total" "$swap_total"
+    print_info "Swap Used" "$swap_used"
+    print_info "Swap Free" "$swap_free"
+fi
+
+# --------------------------------------------
+# 4. DISK INFORMATION
+# --------------------------------------------
+print_header "DISK INFORMATION"
+
+# Disk Usage
+echo -e "${CYAN}►${NC} ${WHITE}Filesystem Usage:${NC}"
+echo ""
+df -h | grep -v "tmpfs" | grep -v "devtmpfs" | grep -v "snap" | while read line; do
+    if echo "$line" | grep -q "^Filesystem"; then
+        echo -e "  ${BLUE}$line${NC}"
+    else
+        usage=$(echo "$line" | awk '{print $5}' | sed 's/%//')
+        mount=$(echo "$line" | awk '{print $6}')
+        if [ "$usage" -lt 80 ]; then
+            echo -e "  ${GREEN}$line${NC}"
+        elif [ "$usage" -lt 90 ]; then
+            echo -e "  ${YELLOW}$line${NC}"
+        else
+            echo -e "  ${RED}$line${NC}"
+        fi
+    fi
+done
+
+# Disk I/O (if iostat available)
+if command -v iostat &>/dev/null; then
+    echo ""
+    print_info "Disk I/O (kB/s)"
+    iostat -d 1 2 | tail -n +4 | head -n -1 | sort -u | while read line; do
+        if echo "$line" | grep -q "^[a-z]"; then
+            device=$(echo "$line" | awk '{print $1}')
+            tps=$(echo "$line" | awk '{print $2}')
+            read_kb=$(echo "$line" | awk '{print $3}')
+            write_kb=$(echo "$line" | awk '{print $4}')
+            if [ "$read_kb" != "0.00" ] || [ "$write_kb" != "0.00" ]; then
+                echo -e "  ${CYAN}$device${NC}: TPS=${GREEN}$tps${NC}, Read=${BLUE}$read_kb${NC}KB/s, Write=${PURPLE}$write_kb${NC}KB/s"
+            fi
+        fi
+    done
+fi
+
+# Inode Usage
+echo ""
+print_info "Inode Usage"
+df -i | grep -v "tmpfs" | grep -v "devtmpfs" | grep -v "snap" | while read line; do
+    if echo "$line" | grep -q "^Filesystem"; then
+        echo -e "  ${BLUE}$line${NC}"
+    else
+        usage=$(echo "$line" | awk '{print $5}' | sed 's/%//')
+        if [ "$usage" -lt 80 ]; then
+            echo -e "  ${GREEN}$line${NC}"
+        elif [ "$usage" -lt 90 ]; then
+            echo -e "  ${YELLOW}$line${NC}"
+        else
+            echo -e "  ${RED}$line${NC}"
+        fi
+    fi
+done
+
+# --------------------------------------------
+# 5. NETWORK INFORMATION
+# --------------------------------------------
+print_header "NETWORK INFORMATION"
+
+# Hostname/IPs
+print_info "Hostname" "$(hostname)"
+print_info "FQDN" "$(hostname -f 2>/dev/null || echo 'N/A')"
+
+# IP Addresses
+echo -e "${CYAN}►${NC} ${WHITE}IP Addresses:${NC}"
+ip -4 addr show | grep inet | grep -v "127.0.0.1" | awk '{print "  " $2}' | while read line; do
+    echo -e "  ${GREEN}$line${NC}"
+done
+
+# Network Interfaces
+echo ""
+print_info "Network Interfaces"
+ip -br link | grep -v "lo" | while read line; do
+    interface=$(echo "$line" | awk '{print $1}')
+    state=$(echo "$line" | awk '{print $2}')
+    if [ "$state" = "UP" ]; then
+        echo -e "  ${GREEN}$interface${NC}: ${WHITE}$state${NC}"
+    else
+        echo -e "  ${YELLOW}$interface${NC}: ${WHITE}$state${NC}"
+    fi
+done
+
+# --------------------------------------------
+# 6. PROCESS INFORMATION
+# --------------------------------------------
+print_header "PROCESS INFORMATION"
+
+# Total Processes
+total_procs=$(ps aux | wc -l)
+print_info "Total Processes" "$total_procs"
+
+# Top 5 CPU Processes
+echo -e "\n${CYAN}►${NC} ${WHITE}Top 5 CPU Processes:${NC}"
+ps aux --sort=-%cpu | head -6 | tail -5 | while read line; do
+    cpu=$(echo "$line" | awk '{print $3}')
+    mem=$(echo "$line" | awk '{print $4}')
+    cmd=$(echo "$line" | awk '{for(i=11;i<=NF;i++) printf "%s ", $i; print ""}' | cut -c1-40)
+    echo -e "  ${YELLOW}CPU:${NC} ${cpu}% ${YELLOW}MEM:${NC} ${mem}% ${WHITE}${cmd}${NC}"
+done
+
+# Top 5 Memory Processes
+echo -e "\n${CYAN}►${NC} ${WHITE}Top 5 Memory Processes:${NC}"
+ps aux --sort=-%mem | head -6 | tail -5 | while read line; do
+    cpu=$(echo "$line" | awk '{print $3}')
+    mem=$(echo "$line" | awk '{print $4}')
+    cmd=$(echo "$line" | awk '{for(i=11;i<=NF;i++) printf "%s ", $i; print ""}' | cut -c1-40)
+    echo -e "  ${PURPLE}MEM:${NC} ${mem}% ${YELLOW}CPU:${NC} ${cpu}% ${WHITE}${cmd}${NC}"
+done
+
+# Zombie Processes
+zombies=$(ps aux | grep -c "Z")
+if [ "$zombies" -gt 0 ]; then
+    echo ""
+    print_warning "Zombie Processes: $zombies"
+fi
+
+# --------------------------------------------
+# 7. SERVICE STATUS (Critical Services)
+# --------------------------------------------
+print_header "SERVICE STATUS"
+
+check_service() {
+    local service=$1
+    if systemctl is-active --quiet "$service" 2>/dev/null; then
+        echo -e "  ${GREEN}●${NC} $service ${GREEN}(running)${NC}"
+    elif systemctl is-active --quiet "$service" 2>/dev/null; then
+        echo -e "  ${RED}●${NC} $service ${RED}(stopped)${NC}"
+    else
+        echo -e "  ${YELLOW}○${NC} $service ${YELLOW}(unknown)${NC}"
+    fi
+}
+
+# Common services to check
+services=("ssh" "nginx" "apache2" "httpd" "mysql" "mariadb" "postgresql" "docker" "redis" "mongodb")
+found_services=0
+
+for svc in "${services[@]}"; do
+    if systemctl list-units --all | grep -q "$svc.service" 2>/dev/null; then
+        check_service "$svc"
+        found_services=$((found_services + 1))
+    fi
+done
+
+if [ "$found_services" -eq 0 ]; then
+    echo -e "  ${YELLOW}No common services found or systemctl not available${NC}"
+fi
+
+# --------------------------------------------
+# 8. SECURITY INFORMATION
+# --------------------------------------------
+print_header "SECURITY INFORMATION"
+
+# Running as root?
+if [ "$EUID" -eq 0 ]; then
+    print_warning "Running as root user"
+else
+    print_info "User" "$(whoami) (non-root)"
+fi
+
+# Firewall Status
+if command -v ufw &>/dev/null; then
+    if ufw status | grep -q "Status: active"; then
+        print_info "Firewall" "${GREEN}UFW Active${NC}"
+    else
+        print_info "Firewall" "${YELLOW}UFW Inactive${NC}"
+    fi
+elif command -v firewall-cmd &>/dev/null; then
+    if firewall-cmd --state 2>/dev/null | grep -q "running"; then
+        print_info "Firewall" "${GREEN}Firewalld Active${NC}"
+    else
+        print_info "Firewall" "${YELLOW}Firewalld Inactive${NC}"
+    fi
+elif command -v iptables &>/dev/null; then
+    if iptables -L -n | grep -q "Chain INPUT" && iptables -L -n | grep -q "Chain FORWARD"; then
+        print_info "Firewall" "${GREEN}iptables Configured${NC}"
+    else
+        print_info "Firewall" "${YELLOW}iptables Not Configured${NC}"
+    fi
+else
+    print_info "Firewall" "${YELLOW}Unknown${NC}"
+fi
+
+# SELinux Status
+if command -v getenforce &>/dev/null; then
+    selinux=$(getenforce)
+    if [ "$selinux" = "Enforcing" ]; then
+        print_info "SELinux" "${GREEN}$selinux${NC}"
+    elif [ "$selinux" = "Permissive" ]; then
+        print_info "SELinux" "${YELLOW}$selinux${NC}"
+    else
+        print_info "SELinux" "${RED}$selinux${NC}"
+    fi
+fi
+
+# Failed Login Attempts
+if [ -f /var/log/auth.log ]; then
+    failed_logins=$(grep "Failed password" /var/log/auth.log 2>/dev/null | wc -l)
+    if [ "$failed_logins" -gt 0 ]; then
+        print_warning "Failed Login Attempts: $failed_logins"
+    else
+        print_info "Failed Login Attempts" "0"
+    fi
+elif [ -f /var/log/secure ]; then
+    failed_logins=$(grep "Failed password" /var/log/secure 2>/dev/null | wc -l)
+    if [ "$failed_logins" -gt 0 ]; then
+        print_warning "Failed Login Attempts: $failed_logins"
+    else
+        print_info "Failed Login Attempts" "0"
+    fi
+fi
+
+# --------------------------------------------
+# 9. RESOURCE SUMMARY
+# --------------------------------------------
+print_header "RESOURCE SUMMARY"
+
+# Overall Health Score
+health_score=0
+max_score=10
+
+# Check CPU
+if [ -n "$cpu_usage_int" ]; then
+    if [ "$cpu_usage_int" -lt 50 ]; then
+        health_score=$((health_score + 2))
+    elif [ "$cpu_usage_int" -lt 80 ]; then
+        health_score=$((health_score + 1))
+    fi
+fi
+
+# Check Memory
+if [ -n "$mem_percent_int" ]; then
+    if [ "$mem_percent_int" -lt 50 ]; then
+        health_score=$((health_score + 2))
+    elif [ "$mem_percent_int" -lt 80 ]; then
+        health_score=$((health_score + 1))
+    fi
+fi
+
+# Check Disk (check first non-tmpfs mount)
+disk_usage=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+if [ -n "$disk_usage" ] && [ "$disk_usage" -lt 80 ]; then
+    health_score=$((health_score + 2))
+elif [ -n "$disk_usage" ] && [ "$disk_usage" -lt 90 ]; then
+    health_score=$((health_score + 1))
+fi
+
+# Check Load
+load_avg=$(uptime | awk -F'load average:' '{print $2}' | awk '{print $1}' | sed 's/,//')
+if command -n bc &>/dev/null; then
+    load_check=$(echo "$load_avg < $cpu_cores" | bc 2>/dev/null)
+    if [ "$load_check" -eq 1 ]; then
+        health_score=$((health_score + 2))
+    fi
+fi
+
+echo -e "\n${WHITE}Health Score:${NC} ${health_score}/${max_score}"
+if [ "$health_score" -ge 8 ]; then
+    echo -e "${GREEN}✓ System is healthy${NC}"
+elif [ "$health_score" -ge 5 ]; then
+    echo -e "${YELLOW}⚠ System has some issues to address${NC}"
+else
+    echo -e "${RED}✗ System needs attention${NC}"
+fi
+
+# --------------------------------------------
+# 10. RECOMMENDATIONS
+# --------------------------------------------
+print_header "RECOMMENDATIONS"
+
+# Check for updates (Debian/Ubuntu)
+if command -v apt &>/dev/null; then
+    updates=$(apt list --upgradable 2>/dev/null | grep -c upgradable)
+    if [ "$updates" -gt 0 ]; then
+        echo -e "  ${YELLOW}📦${NC} $updates package updates available (run: sudo apt update && sudo apt upgrade)"
+    else
+        echo -e "  ${GREEN}✓${NC} System is up to date"
+    fi
+fi
+
+# Check for updates (RHEL/CentOS)
+if command -v yum &>/dev/null; then
+    updates=$(yum check-update 2>/dev/null | grep -c "\.rpm")
+    if [ "$updates" -gt 0 ]; then
+        echo -e "  ${YELLOW}📦${NC} $updates package updates available (run: sudo yum update)"
+    fi
+fi
+
+# Check disk space
+if [ -n "$disk_usage" ] && [ "$disk_usage" -gt 85 ]; then
+    echo -e "  ${RED}⚠${NC} Disk usage is high ($disk_usage%). Consider cleaning up"
+fi
+
+# Check memory
+if [ -n "$mem_percent_int" ] && [ "$mem_percent_int" -gt 85 ]; then
+    echo -e "  ${RED}⚠${NC} Memory usage is high (${mem_percent}%). Consider adding more RAM"
+fi
+
+# Check load
+if [ -n "$load_avg" ] && [ -n "$cpu_cores" ]; then
+    load_check=$(echo "$load_avg > $cpu_cores" | bc 2>/dev/null)
+    if [ "$load_check" -eq 1 ]; then
+        echo -e "  ${RED}⚠${NC} Load average ($load_avg) is higher than CPU cores ($cpu_cores)"
+    fi
+fi
+
+# --------------------------------------------
+# END
+# --------------------------------------------
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✓ System information complete${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"

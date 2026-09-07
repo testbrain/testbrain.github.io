@@ -1,0 +1,283 @@
+#!/bin/bash
+
+# ============================================
+# Nginx Health Check Script
+# Comprehensive Nginx monitoring and configuration check
+# ============================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+print_header() {
+    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${WHITE}  $1${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+print_info() {
+    printf "${GREEN}►${NC} ${CYAN}%-20s${NC} %s\n" "$1:" "$2"
+}
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+clear
+echo -e "${WHITE}"
+echo "════════════════════════════════════════════════════════════"
+echo "      🌐  NGINX HEALTH REPORT                              "
+echo "════════════════════════════════════════════════════════════"
+echo -e "${NC}"
+
+# --------------------------------------------
+# 1. NGINX STATUS
+# --------------------------------------------
+print_header "NGINX STATUS"
+
+# Check if installed
+if ! command -v nginx &>/dev/null; then
+    print_error "Nginx is not installed"
+    exit 1
+fi
+
+# Check service
+if systemctl is-active --quiet nginx 2>/dev/null; then
+    print_success "Nginx: Running"
+else
+    print_error "Nginx: Not running"
+fi
+
+# Nginx version
+version=$(nginx -v 2>&1)
+print_info "Version" "$version"
+
+# Uptime
+uptime_seconds=$(systemctl show nginx -p ActiveEnterTimestamp --value 2>/dev/null)
+if [ -n "$uptime_seconds" ]; then
+    uptime_date=$(date -d "$uptime_seconds" 2>/dev/null)
+    [ -n "$uptime_date" ] && print_info "Started" "$uptime_date"
+fi
+
+# --------------------------------------------
+# 2. NGINX CONFIGURATION
+# --------------------------------------------
+print_header "CONFIGURATION CHECK"
+
+# Main config
+main_config=$(nginx -t 2>&1)
+if echo "$main_config" | grep -q "syntax is ok"; then
+    print_success "Configuration syntax: OK"
+else
+    print_error "Configuration error:"
+    echo "$main_config"
+fi
+
+# Config files
+echo -e "\n${CYAN}►${NC} ${WHITE}Configuration files:${NC}"
+nginx -T 2>/dev/null | grep "^# configuration file" | head -10 | while read line; do
+    file=$(echo "$line" | awk '{print $4}')
+    if [ -f "$file" ]; then
+        echo -e "  ${GREEN}$file${NC}"
+    else
+        echo -e "  ${RED}$file (not found)${NC}"
+    fi
+done
+
+# Worker processes
+worker_processes=$(grep -E "^\s*worker_processes" /etc/nginx/nginx.conf 2>/dev/null | awk '{print $2}' | sed 's/;//')
+print_info "Worker Processes" "$worker_processes"
+
+worker_connections=$(grep "worker_connections" /etc/nginx/nginx.conf 2>/dev/null | awk '{print $2}' | sed 's/;//')
+print_info "Worker Connections" "$worker_connections"
+
+# --------------------------------------------
+# 3. SSL CERTIFICATES
+# --------------------------------------------
+print_header "SSL CERTIFICATES"
+
+# Find SSL certificates
+echo -e "${CYAN}►${NC} ${WHITE}SSL certificates in use:${NC}"
+grep -r "ssl_certificate" /etc/nginx/ 2>/dev/null | grep -v "#" | while read line; do
+    cert_path=$(echo "$line" | awk '{print $2}' | sed 's/;//')
+    if [ -f "$cert_path" ]; then
+        expiry=$(openssl x509 -enddate -noout -in "$cert_path" 2>/dev/null | cut -d= -f2)
+        if [ -n "$expiry" ]; then
+            days_left=$(( ($(date -d "$expiry" +%s) - $(date +%s)) / 86400 ))
+            if [ "$days_left" -lt 7 ]; then
+                echo -e "  ${RED}$cert_path${NC}: ${YELLOW}$days_left days${NC}"
+            elif [ "$days_left" -lt 30 ]; then
+                echo -e "  ${YELLOW}$cert_path${NC}: ${YELLOW}$days_left days${NC}"
+            else
+                echo -e "  ${GREEN}$cert_path${NC}: ${WHITE}$days_left days${NC}"
+            fi
+        fi
+    else
+        echo -e "  ${RED}$cert_path (missing)${NC}"
+    fi
+done
+
+# --------------------------------------------
+# 4. SITES & UPSTREAMS
+# --------------------------------------------
+print_header "SITES & UPSTREAMS"
+
+# Enabled sites
+echo -e "${CYAN}►${NC} ${WHITE}Enabled sites:${NC}"
+if [ -d /etc/nginx/sites-enabled ]; then
+    for site in /etc/nginx/sites-enabled/*; do
+        if [ -f "$site" ]; then
+            site_name=$(basename "$site")
+            server_names=$(grep "server_name" "$site" 2>/dev/null | grep -v "#" | awk '{print $2}' | sed 's/;//g' | head -1)
+            echo -e "  ${GREEN}$site_name${NC}: ${WHITE}${server_names:-default}${NC}"
+        fi
+    done
+elif [ -d /etc/nginx/conf.d ]; then
+    for site in /etc/nginx/conf.d/*.conf; do
+        if [ -f "$site" ]; then
+            site_name=$(basename "$site")
+            server_names=$(grep "server_name" "$site" 2>/dev/null | grep -v "#" | awk '{print $2}' | sed 's/;//g' | head -1)
+            echo -e "  ${GREEN}$site_name${NC}: ${WHITE}${server_names:-default}${NC}"
+        fi
+    done
+else
+    print_warning "No sites directory found"
+fi
+
+# Upstream blocks
+echo -e "\n${CYAN}►${NC} ${WHITE}Upstream blocks:${NC}"
+grep -r "upstream" /etc/nginx/ 2>/dev/null | grep -v "#" | while read line; do
+    upstream_name=$(echo "$line" | awk '{print $2}')
+    echo -e "  ${CYAN}$upstream_name${NC}"
+done | sort -u
+
+# --------------------------------------------
+# 5. ACCESS LOGS & ERRORS
+# --------------------------------------------
+print_header "LOGS & ERRORS"
+
+# Access log location
+access_log=$(grep "access_log" /etc/nginx/nginx.conf 2>/dev/null | grep -v "#" | head -1 | awk '{print $2}' | sed 's/;//')
+[ -n "$access_log" ] && print_info "Access Log" "$access_log"
+
+# Error log location
+error_log=$(grep "error_log" /etc/nginx/nginx.conf 2>/dev/null | grep -v "#" | head -1 | awk '{print $2}' | sed 's/;//')
+[ -n "$error_log" ] && print_info "Error Log" "$error_log"
+
+# Recent errors
+if [ -f "$error_log" ]; then
+    echo -e "\n${CYAN}►${NC} ${WHITE}Recent errors (last 5):${NC}"
+    tail -5 "$error_log" 2>/dev/null | while read line; do
+        if echo "$line" | grep -qi "error"; then
+            echo -e "  ${RED}$line${NC}"
+        elif echo "$line" | grep -qi "warn"; then
+            echo -e "  ${YELLOW}$line${NC}"
+        else
+            echo -e "  $line"
+        fi
+    done
+fi
+
+# --------------------------------------------
+# 6. PERFORMANCE METRICS
+# --------------------------------------------
+print_header "PERFORMANCE METRICS"
+
+# Check status page if available
+if [ -f /etc/nginx/sites-enabled/status ] || grep -q "location /nginx_status" /etc/nginx/nginx.conf 2>/dev/null; then
+    echo -e "${CYAN}►${NC} ${WHITE}Status page is configured${NC}"
+    echo -e "  ${YELLOW}Enable stub_status module for detailed metrics${NC}"
+else
+    echo -e "${CYAN}►${NC} ${WHITE}Status page not configured${NC}"
+    echo -e "  ${YELLOW}Add 'location /nginx_status { stub_status; }' to enable${NC}"
+fi
+
+# Active connections (if status page accessible)
+if curl -s --max-time 2 http://localhost/nginx_status 2>/dev/null | grep -q "Active connections"; then
+    echo -e "\n${CYAN}►${NC} ${WHITE}Connection stats:${NC}"
+    curl -s http://localhost/nginx_status 2>/dev/null | while read line; do
+        echo -e "  $line"
+    done
+fi
+
+# --------------------------------------------
+# 7. NGINX SECURITY
+# --------------------------------------------
+print_header "SECURITY CHECK"
+
+# Check security headers
+echo -e "${CYAN}►${NC} ${WHITE}Security headers:${NC}"
+
+# HSTS
+if grep -r "add_header Strict-Transport-Security" /etc/nginx/ 2>/dev/null | grep -v "#" > /dev/null; then
+    echo -e "  ${GREEN}✓${NC} HSTS configured"
+else
+    echo -e "  ${YELLOW}✗${NC} HSTS not configured (recommended)"
+fi
+
+# X-Frame-Options
+if grep -r "add_header X-Frame-Options" /etc/nginx/ 2>/dev/null | grep -v "#" > /dev/null; then
+    echo -e "  ${GREEN}✓${NC} X-Frame-Options configured"
+else
+    echo -e "  ${YELLOW}✗${NC} X-Frame-Options not configured"
+fi
+
+# X-Content-Type-Options
+if grep -r "add_header X-Content-Type-Options" /etc/nginx/ 2>/dev/null | grep -v "#" > /dev/null; then
+    echo -e "  ${GREEN}✓${NC} X-Content-Type-Options configured"
+else
+    echo -e "  ${YELLOW}✗${NC} X-Content-Type-Options not configured"
+fi
+
+# Version hiding
+if grep -q "server_tokens off" /etc/nginx/nginx.conf 2>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} Server tokens hidden"
+else
+    echo -e "  ${YELLOW}✗${NC} Server tokens not hidden (add 'server_tokens off;')"
+fi
+
+# --------------------------------------------
+# 8. RECOMMENDATIONS
+# --------------------------------------------
+print_header "RECOMMENDATIONS"
+
+# Check for common issues
+if [ "$worker_processes" = "auto" ] || [ "$worker_processes" -lt 2 ]; then
+    echo -e "  ${YELLOW}→${NC} Consider setting worker_processes to number of CPU cores"
+fi
+
+if [ -n "$worker_connections" ] && [ "$worker_connections" -lt 1024 ]; then
+    echo -e "  ${YELLOW}→${NC} Consider increasing worker_connections (current: $worker_connections)"
+fi
+
+if ! grep -q "server_tokens off" /etc/nginx/nginx.conf 2>/dev/null; then
+    echo -e "  ${YELLOW}→${NC} Add 'server_tokens off;' to hide nginx version"
+fi
+
+if ! grep -q "add_header X-Frame-Options" /etc/nginx/nginx.conf 2>/dev/null; then
+    echo -e "  ${YELLOW}→${NC} Add security headers to protect against attacks"
+fi
+
+# Check for backup config
+if [ -f /etc/nginx/nginx.conf.default ]; then
+    echo -e "  ${GREEN}✓${NC} Backup config found"
+else
+    echo -e "  ${YELLOW}→${NC} Backup your nginx configuration"
+fi
+
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✓ Nginx health check complete${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"

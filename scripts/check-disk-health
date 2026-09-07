@@ -1,0 +1,265 @@
+#!/bin/bash
+
+# ============================================
+# Disk Health Check Script
+# Comprehensive disk health monitoring
+# ============================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+print_header() {
+    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${WHITE}  $1${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+print_info() {
+    printf "${GREEN}►${NC} ${CYAN}%-20s${NC} %s\n" "$1:" "$2"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+clear
+echo -e "${WHITE}"
+echo "═══════════════════════════════════════════════════════════"
+echo "      💾  DISK HEALTH REPORT                               "
+echo "═══════════════════════════════════════════════════════════"
+echo -e "${NC}"
+
+# --------------------------------------------
+# 1. DISK USAGE
+# --------------------------------------------
+print_header "DISK USAGE"
+
+df -h | grep -v "tmpfs" | grep -v "devtmpfs" | while read line; do
+    if echo "$line" | grep -q "^Filesystem"; then
+        echo -e "${BLUE}$line${NC}"
+    else
+        usage=$(echo "$line" | awk '{print $5}' | sed 's/%//')
+        mount=$(echo "$line" | awk '{print $6}')
+        if [ "$usage" -lt 80 ]; then
+            echo -e "  ${GREEN}$line${NC}"
+        elif [ "$usage" -lt 90 ]; then
+            echo -e "  ${YELLOW}$line${NC}"
+        else
+            echo -e "  ${RED}$line${NC}"
+        fi
+    fi
+done
+
+# --------------------------------------------
+# 2. INODE USAGE
+# --------------------------------------------
+print_header "INODE USAGE"
+
+df -i | grep -v "tmpfs" | grep -v "devtmpfs" | while read line; do
+    if echo "$line" | grep -q "^Filesystem"; then
+        echo -e "${BLUE}$line${NC}"
+    else
+        usage=$(echo "$line" | awk '{print $5}' | sed 's/%//')
+        if [ "$usage" -lt 80 ]; then
+            echo -e "  ${GREEN}$line${NC}"
+        elif [ "$usage" -lt 90 ]; then
+            echo -e "  ${YELLOW}$line${NC}"
+        else
+            echo -e "  ${RED}$line${NC}"
+        fi
+    fi
+done
+
+# --------------------------------------------
+# 3. LARGE FILES & DIRECTORIES
+# --------------------------------------------
+print_header "LARGE FILES & DIRECTORIES"
+
+# Top 10 largest directories
+echo -e "${CYAN}►${NC} ${WHITE}Top 10 largest directories in /:${NC}"
+du -sh /* 2>/dev/null | sort -rh | head -10 | while read line; do
+    size=$(echo "$line" | awk '{print $1}')
+    dir=$(echo "$line" | awk '{print $2}')
+    echo -e "  ${YELLOW}$size${NC} $dir"
+done
+
+# Top 10 largest files
+echo -e "\n${CYAN}►${NC} ${WHITE}Top 10 largest files:${NC}"
+find / -type f -size +100M 2>/dev/null -exec du -sh {} \; 2>/dev/null | sort -rh | head -10 | while read line; do
+    size=$(echo "$line" | awk '{print $1}')
+    file=$(echo "$line" | awk '{print $2}')
+    echo -e "  ${YELLOW}$size${NC} $file"
+done
+
+# --------------------------------------------
+# 4. DISK PARTITIONS
+# --------------------------------------------
+print_header "DISK PARTITIONS"
+
+lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,FSTYPE | while read line; do
+    if echo "$line" | grep -q "NAME"; then
+        echo -e "${BLUE}$line${NC}"
+    else
+        echo -e "  $line"
+    fi
+done
+
+# --------------------------------------------
+# 5. DISK PERFORMANCE
+# --------------------------------------------
+print_header "DISK PERFORMANCE"
+
+# Test read speed (simple)
+echo -e "${CYAN}►${NC} ${WHITE}Disk read speed (quick test):${NC}"
+dd if=/dev/zero of=/tmp/testfile bs=1M count=100 2>&1 | tail -1 | awk '{print "  " $0}'
+rm -f /tmp/testfile 2>/dev/null
+
+# Show disk I/O stats
+echo -e "\n${CYAN}►${NC} ${WHITE}Disk I/O stats:${NC}"
+iostat -d 2>/dev/null | grep -E "Device|sd|hd|vd|nvme" | tail -10 | while read line; do
+    echo -e "  $line"
+done
+
+# Disk queue length
+echo -e "\n${CYAN}►${NC} ${WHITE}Disk queue length:${NC}"
+cat /proc/sys/vm/block_dump 2>/dev/null && echo -e "  ${YELLOW}Block dump enabled${NC}" || echo -e "  ${GREEN}Normal${NC}"
+
+# --------------------------------------------
+# 6. SMART DATA (if available)
+# --------------------------------------------
+print_header "SMART DATA"
+
+if command -v smartctl &>/dev/null; then
+    for disk in $(ls /dev/sd* /dev/hd* /dev/nvme* 2>/dev/null | head -5); do
+        echo -e "${CYAN}►${NC} ${WHITE}Checking $disk:${NC}"
+        smartctl -H "$disk" 2>/dev/null | grep -E "SMART overall-health|SMART Health Status" | while read line; do
+            if echo "$line" | grep -q "PASSED"; then
+                echo -e "  ${GREEN}$line${NC}"
+            else
+                echo -e "  ${RED}$line${NC}"
+            fi
+        done
+        smartctl -A "$disk" 2>/dev/null | grep -E "Reallocated_Sector|Current_Pending_Sector|Offline_Uncorrectable" | while read line; do
+            echo -e "  $line"
+        done
+        echo ""
+    done
+else
+    print_warning "smartctl not installed (install smartmontools for SMART data)"
+fi
+
+# --------------------------------------------
+# 7. FILESYSTEM HEALTH
+# --------------------------------------------
+print_header "FILESYSTEM HEALTH"
+
+# Check for filesystem errors
+echo -e "${CYAN}►${NC} ${WHITE}Recent filesystem errors in dmesg:${NC}"
+dmesg | grep -i "error\|fail\|corrupt" | grep -i "block\|filesystem\|disk" | tail -10 | while read line; do
+    echo -e "  ${YELLOW}$line${NC}"
+done
+
+# --------------------------------------------
+# 8. DISK PREDICTIVE FAILURE
+# --------------------------------------------
+print_header "PREDICTIVE FAILURE ANALYSIS"
+
+if command -v smartctl &>/dev/null; then
+    failure_risk=0
+    for disk in $(ls /dev/sd* /dev/hd* /dev/nvme* 2>/dev/null | head -5); do
+        echo -e "${CYAN}►${NC} ${WHITE}Analyzing $disk:${NC}"
+        
+        # Check reallocated sectors
+        realloc=$(smartctl -A "$disk" 2>/dev/null | grep Reallocated_Sector | awk '{print $10}')
+        if [ -n "$realloc" ] && [ "$realloc" -gt 0 ]; then
+            echo -e "  ${YELLOW}Reallocated sectors: $realloc (warning)${NC}"
+            failure_risk=$((failure_risk + 1))
+        fi
+        
+        # Check pending sectors
+        pending=$(smartctl -A "$disk" 2>/dev/null | grep Current_Pending_Sector | awk '{print $10}')
+        if [ -n "$pending" ] && [ "$pending" -gt 0 ]; then
+            echo -e "  ${RED}Pending sectors: $pending (high risk)${NC}"
+            failure_risk=$((failure_risk + 2))
+        fi
+        
+        # Check uncorrectable sectors
+        uncorrectable=$(smartctl -A "$disk" 2>/dev/null | grep Offline_Uncorrectable | awk '{print $10}')
+        if [ -n "$uncorrectable" ] && [ "$uncorrectable" -gt 0 ]; then
+            echo -e "  ${RED}Uncorrectable sectors: $uncorrectable (critical)${NC}"
+            failure_risk=$((failure_risk + 3))
+        fi
+        
+        # Overall health
+        health=$(smartctl -H "$disk" 2>/dev/null | grep "SMART overall-health" | awk '{print $6}')
+        if [ "$health" = "PASSED" ]; then
+            echo -e "  ${GREEN}Health: PASSED${NC}"
+        else
+            echo -e "  ${RED}Health: FAILED${NC}"
+            failure_risk=$((failure_risk + 5))
+        fi
+    done
+    
+    if [ "$failure_risk" -eq 0 ]; then
+        print_success "No disk failure indicators found"
+    elif [ "$failure_risk" -lt 5 ]; then
+        print_warning "Minor disk issues detected (risk level: $failure_risk/10)"
+    else
+        print_error "Disk failure risk HIGH (risk level: $failure_risk/10) - BACKUP IMMEDIATELY"
+    fi
+else
+    print_warning "Cannot perform predictive analysis (smartctl not installed)"
+fi
+
+# --------------------------------------------
+# 9. BACKUP RECOMMENDATIONS
+# --------------------------------------------
+print_header "BACKUP RECOMMENDATIONS"
+
+echo -e "${CYAN}►${NC} ${WHITE}Important directories for backup:${NC}"
+for dir in "/etc" "/home" "/var/www" "/var/lib/mysql" "/var/lib/postgresql"; do
+    if [ -d "$dir" ]; then
+        size=$(du -sh "$dir" 2>/dev/null | awk '{print $1}')
+        echo -e "  ${GREEN}$dir${NC} (${YELLOW}$size${NC})"
+    fi
+done
+
+# Check for existing backup scripts
+echo -e "\n${CYAN}►${NC} ${WHITE}Backup status:${NC}"
+if [ -f /etc/crontab ] && grep -q "backup" /etc/crontab 2>/dev/null; then
+    echo -e "  ${GREEN}Backup cron jobs found${NC}"
+else
+    echo -e "  ${YELLOW}No backup cron jobs found${NC}"
+fi
+
+# Check last backup age
+backup_dirs=$(find / -maxdepth 3 -type d -name "backup" 2>/dev/null | head -3)
+if [ -n "$backup_dirs" ]; then
+    echo -e "\n${CYAN}►${NC} ${WHITE}Recent backups:${NC}"
+    for dir in $backup_dirs; do
+        latest=$(find "$dir" -type f -mtime -7 2>/dev/null | head -1)
+        if [ -n "$latest" ]; then
+            echo -e "  ${GREEN}$dir: Recent backup found${NC}"
+        else
+            echo -e "  ${YELLOW}$dir: No recent backup (7+ days)${NC}"
+        fi
+    done
+fi
+
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✓ Disk health check complete${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"

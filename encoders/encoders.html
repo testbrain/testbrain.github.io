@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Encoders & Generators — Dev Tools</title>
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="encoders.css" />
+</head>
+<body>
+    <div class="container container-wide">
+
+        <a class="back-link" href="../index.html">← Home</a>
+
+        <header class="header">
+            <h1>🔑 Encoders &amp; Generators</h1>
+            <p class="subtitle">Base64, URL, hashes, timestamps, UUIDs, passwords &amp; QR codes</p>
+        </header>
+
+        <div class="tabs" id="tabs">
+            <button class="tab-btn active" data-tab="base64">Base64</button>
+            <button class="tab-btn" data-tab="url">URL</button>
+            <button class="tab-btn" data-tab="hash">Hash</button>
+            <button class="tab-btn" data-tab="timestamp">Timestamp</button>
+            <button class="tab-btn" data-tab="uuid">UUID</button>
+            <button class="tab-btn" data-tab="password">Password</button>
+            <button class="tab-btn" data-tab="qrcode">QR Code</button>
+        </div>
+
+        <!-- BASE64 -->
+        <section class="tab-panel active" id="panel-base64">
+            <div class="mode-toggle" id="b64Mode">
+                <button class="mode-btn active" data-mode="encode">Encode</button>
+                <button class="mode-btn" data-mode="decode">Decode</button>
+            </div>
+            <label class="field-label" for="b64Input">Text</label>
+            <textarea id="b64Input" class="io-textarea" placeholder="Type or paste text..."></textarea>
+            <label class="field-label">Result</label>
+            <div class="io-output-wrap">
+                <textarea id="b64Output" class="io-output" readonly placeholder="Result appears here..."></textarea>
+                <button class="btn-copy io-copy" data-copy-target="b64Output">📋 Copy</button>
+            </div>
+        </section>
+
+        <!-- URL -->
+        <section class="tab-panel" id="panel-url">
+            <div class="mode-toggle" id="urlMode">
+                <button class="mode-btn active" data-mode="encode">Encode</button>
+                <button class="mode-btn" data-mode="decode">Decode</button>
+            </div>
+            <label class="field-label" for="urlInput">Text / URL</label>
+            <textarea id="urlInput" class="io-textarea" placeholder="Type or paste text/URL..."></textarea>
+            <label class="field-label">Result</label>
+            <div class="io-output-wrap">
+                <textarea id="urlOutput" class="io-output" readonly placeholder="Result appears here..."></textarea>
+                <button class="btn-copy io-copy" data-copy-target="urlOutput">📋 Copy</button>
+            </div>
+        </section>
+
+        <!-- HASH -->
+        <section class="tab-panel" id="panel-hash">
+            <label class="field-label" for="hashInput">Text</label>
+            <textarea id="hashInput" class="io-textarea" placeholder="Type or paste text to hash..."></textarea>
+            <div class="hash-list" id="hashList"></div>
+        </section>
+
+        <!-- TIMESTAMP -->
+        <section class="tab-panel" id="panel-timestamp">
+            <div class="ts-grid">
+                <div class="ts-col">
+                    <label class="field-label" for="tsInput">Unix Timestamp → Date</label>
+                    <div class="btn-row">
+                        <input type="number" id="tsInput" class="io-input" placeholder="e.g. 1735689600" />
+                        <select id="tsUnit" class="io-select">
+                            <option value="seconds">seconds</option>
+                            <option value="ms">milliseconds</option>
+                        </select>
+                        <button class="btn" id="tsNowBtn">Now</button>
+                    </div>
+                    <div class="ts-result" id="tsToDateResult"></div>
+                </div>
+
+                <div class="ts-col">
+                    <label class="field-label" for="dateInput">Date → Unix Timestamp</label>
+                    <div class="btn-row">
+                        <input type="datetime-local" id="dateInput" class="io-input" />
+                    </div>
+                    <div class="ts-result" id="dateToTsResult"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- UUID -->
+        <section class="tab-panel" id="panel-uuid">
+            <div class="btn-row">
+                <label class="field-label uuid-label" for="uuidCount">How many?</label>
+                <input type="number" id="uuidCount" class="io-input uuid-count" value="5" min="1" max="50" />
+                <button class="btn" id="uuidCopyAllBtn">📋 Copy All</button>
+            </div>
+            <div class="uuid-list" id="uuidList"></div>
+        </section>
+
+        <!-- PASSWORD -->
+        <section class="tab-panel" id="panel-password">
+            <div class="pw-controls">
+                <label class="field-label">Length: <span id="pwLengthLabel">16</span></label>
+                <input type="range" id="pwLength" min="4" max="64" value="16" />
+
+                <div class="pw-options">
+                    <label><input type="checkbox" id="pwUpper" checked /> Uppercase (A-Z)</label>
+                    <label><input type="checkbox" id="pwLower" checked /> Lowercase (a-z)</label>
+                    <label><input type="checkbox" id="pwNumbers" checked /> Numbers (0-9)</label>
+                    <label><input type="checkbox" id="pwSymbols" checked /> Symbols (!@#$…)</label>
+                </div>
+            </div>
+
+            <div class="io-output-wrap">
+                <input type="text" id="pwOutput" class="io-output io-output-single" readonly placeholder="Password appears here..." />
+                <button class="btn-copy io-copy" data-copy-target="pwOutput">📋 Copy</button>
+            </div>
+            <div class="pw-strength" id="pwStrength"></div>
+        </section>
+
+        <!-- QR CODE -->
+        <section class="tab-panel" id="panel-qrcode">
+            <label class="field-label" for="qrInput">Text / URL</label>
+            <input type="text" id="qrInput" class="io-input io-input-full" placeholder="Enter text or URL to encode..." />
+            <div class="btn-row">
+                <select id="qrSize" class="io-select">
+                    <option value="128">128 × 128</option>
+                    <option value="192">192 × 192</option>
+                    <option value="256" selected>256 × 256</option>
+                    <option value="320">320 × 320</option>
+                </select>
+                <button class="btn btn-primary" id="qrGenerateBtn">Generate QR</button>
+                <button class="btn" id="qrDownloadBtn">💾 Download PNG</button>
+            </div>
+            <div class="qr-preview" id="qrPreview">
+                <div class="qr-empty" id="qrEmpty">Enter text above and click Generate</div>
+                <div id="qrCanvasHolder"></div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>The Swiss Army knife for everyday dev busywork.</p>
+        </footer>
+
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="qrcode.js"></script>
+    <script src="encoders.js"></script>
+</body>
+</html>

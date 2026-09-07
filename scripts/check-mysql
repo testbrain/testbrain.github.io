@@ -1,0 +1,300 @@
+#!/bin/bash
+
+# ============================================
+# MySQL/MariaDB Health Check Script
+# Comprehensive database monitoring
+# ============================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+print_header() {
+    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${WHITE}  $1${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+print_info() {
+    printf "${GREEN}►${NC} ${CYAN}%-20s${NC} %s\n" "$1:" "$2"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+clear
+echo -e "${WHITE}"
+echo "════════════════════════════════════════════════════════════"
+echo "      🗄️  MySQL/MariaDB HEALTH REPORT                       "
+echo "════════════════════════════════════════════════════════════"
+echo -e "${NC}"
+
+# --------------------------------------------
+# 1. DATABASE SERVICE STATUS
+# --------------------------------------------
+print_header "DATABASE SERVICE STATUS"
+
+# Check MySQL/MariaDB service
+for service in mysql mariadb mysqld; do
+    if systemctl is-active --quiet "$service" 2>/dev/null; then
+        print_success "$service: Running"
+        DB_SERVICE="$service"
+        break
+    fi
+done
+
+if [ -z "$DB_SERVICE" ]; then
+    print_error "No MySQL/MariaDB service found running"
+    exit 1
+fi
+
+# Service details
+echo -e "\n${CYAN}►${NC} ${WHITE}Service details:${NC}"
+systemctl status "$DB_SERVICE" 2>/dev/null | head -5 | while read line; do
+    echo -e "  $line"
+done
+
+# --------------------------------------------
+# 2. DATABASE VERSION
+# --------------------------------------------
+print_header "DATABASE VERSION"
+
+if command -v mysql &>/dev/null; then
+    version=$(mysql --version 2>/dev/null)
+    print_info "Version" "$version"
+fi
+
+# --------------------------------------------
+# 3. DATABASE CONNECTION
+# --------------------------------------------
+print_header "CONNECTION STATUS"
+
+# Check if we can connect
+if mysql -e "SELECT 1" &>/dev/null; then
+    print_success "Database connection successful"
+else
+    # Try with default credentials
+    if mysql -uroot -e "SELECT 1" &>/dev/null; then
+        print_success "Database connection successful (root user)"
+    else
+        print_error "Cannot connect to database (check credentials)"
+        exit 1
+    fi
+fi
+
+# Connection details
+echo -e "\n${CYAN}►${NC} ${WHITE}Connection details:${NC}"
+mysql -e "STATUS;" 2>/dev/null | grep -E "Connection|Uptime|Server|Threads|Questions" | while read line; do
+    echo -e "  $line"
+done
+
+# --------------------------------------------
+# 4. DATABASE SIZE
+# --------------------------------------------
+print_header "DATABASE SIZES"
+
+echo -e "${CYAN}►${NC} ${WHITE}Database sizes:${NC}"
+mysql -e "SELECT table_schema AS 'Database', 
+    ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size (MB)',
+    COUNT(*) AS 'Tables'
+    FROM information_schema.tables 
+    GROUP BY table_schema 
+    ORDER BY SUM(data_length + index_length) DESC;" 2>/dev/null | while read line; do
+    if echo "$line" | grep -q "Database"; then
+        echo -e "  ${BLUE}$line${NC}"
+    else
+        db=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        tables=$(echo "$line" | awk '{print $3}')
+        echo -e "  ${GREEN}$db${NC}: ${YELLOW}${size}MB${NC} (${WHITE}$tables tables${NC})"
+    fi
+done
+
+# Total database size
+echo -e "\n${CYAN}►${NC} ${WHITE}Total database size:${NC}"
+total_size=$(mysql -e "SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Total MB' FROM information_schema.tables;" 2>/dev/null | tail -1)
+echo -e "  ${GREEN}${total_size} MB${NC}"
+
+# --------------------------------------------
+# 5. DATABASE STATUS
+# --------------------------------------------
+print_header "DATABASE STATUS"
+
+# Show status variables
+echo -e "${CYAN}►${NC} ${WHITE}Key status variables:${NC}"
+
+status_vars=(
+    "Threads_connected"
+    "Threads_running"
+    "Max_used_connections"
+    "Connections"
+    "Uptime"
+    "Innodb_buffer_pool_reads"
+    "Innodb_buffer_pool_read_requests"
+    "Queries"
+    "Slow_queries"
+    "Open_tables"
+    "Table_locks_waited"
+    "Handler_read_rnd_next"
+    "Key_reads"
+    "Key_read_requests"
+)
+
+for var in "${status_vars[@]}"; do
+    value=$(mysql -e "SHOW GLOBAL STATUS LIKE '$var';" 2>/dev/null | tail -1 | awk '{print $2}')
+    if [ -n "$value" ]; then
+        if [ "$var" = "Threads_connected" ] || [ "$var" = "Threads_running" ]; then
+            # Color code connections
+            if [ "$value" -lt 50 ]; then
+                echo -e "  ${GREEN}$var${NC}: ${WHITE}$value${NC}"
+            elif [ "$value" -lt 100 ]; then
+                echo -e "  ${YELLOW}$var${NC}: ${WHITE}$value${NC}"
+            else
+                echo -e "  ${RED}$var${NC}: ${WHITE}$value${NC}"
+            fi
+        elif [ "$var" = "Slow_queries" ]; then
+            if [ "$value" -eq 0 ]; then
+                echo -e "  ${GREEN}$var${NC}: ${WHITE}$value${NC}"
+            else
+                echo -e "  ${RED}$var${NC}: ${WHITE}$value${NC}"
+            fi
+        else
+            echo -e "  ${CYAN}$var${NC}: ${WHITE}$value${NC}"
+        fi
+    fi
+done
+
+# --------------------------------------------
+# 6. PROCESS LIST
+# --------------------------------------------
+print_header "ACTIVE PROCESSES"
+
+echo -e "${CYAN}►${NC} ${WHITE}Active processes (top 10):${NC}"
+mysql -e "SHOW PROCESSLIST;" 2>/dev/null | head -11 | while read line; do
+    if echo "$line" | grep -q "Id"; then
+        echo -e "  ${BLUE}$line${NC}"
+    else
+        echo -e "  $line"
+    fi
+done
+
+# Process count
+total_procs=$(mysql -e "SHOW PROCESSLIST;" 2>/dev/null | wc -l)
+echo -e "\n${CYAN}►${NC} ${WHITE}Total processes:${NC} $((total_procs - 1))"
+
+# --------------------------------------------
+# 7. INNODB STATUS
+# --------------------------------------------
+print_header "INNODB STATUS"
+
+echo -e "${CYAN}►${NC} ${WHITE}InnoDB buffer pool:${NC}"
+mysql -e "SHOW ENGINE INNODB STATUS\G" 2>/dev/null | grep -E "Buffer pool size|Free buffers|Database pages|Modified db pages" | while read line; do
+    echo -e "  $line"
+done
+
+# Buffer pool hit rate
+bp_reads=$(mysql -e "SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_reads';" 2>/dev/null | tail -1 | awk '{print $2}')
+bp_reads_req=$(mysql -e "SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_read_requests';" 2>/dev/null | tail -1 | awk '{print $2}')
+if [ -n "$bp_reads" ] && [ -n "$bp_reads_req" ] && [ "$bp_reads_req" -gt 0 ]; then
+    hit_rate=$(echo "scale=2; (1 - $bp_reads / $bp_reads_req) * 100" | bc)
+    echo -e "\n${CYAN}►${NC} ${WHITE}Buffer pool hit rate:${NC} ${YELLOW}${hit_rate}%${NC}"
+    if [ "$(echo "$hit_rate > 99" | bc)" -eq 1 ]; then
+        echo -e "  ${GREEN}Excellent${NC}"
+    elif [ "$(echo "$hit_rate > 95" | bc)" -eq 1 ]; then
+        echo -e "  ${YELLOW}Good${NC}"
+    else
+        echo -e "  ${RED}Consider increasing innodb_buffer_pool_size${NC}"
+    fi
+fi
+
+# --------------------------------------------
+# 8. TABLE STATUS
+# --------------------------------------------
+print_header "TABLE STATUS"
+
+# Check for crashed tables
+echo -e "${CYAN}►${NC} ${WHITE}Table health check:${NC}"
+
+# Show table status
+mysql -e "SHOW TABLE STATUS;" 2>/dev/null | grep -v "performance_schema" | grep -v "information_schema" | while read line; do
+    if echo "$line" | grep -q "Name"; then
+        echo -e "  ${BLUE}$line${NC}"
+    else
+        db=$(echo "$line" | awk '{print $1}')
+        engine=$(echo "$line" | awk '{print $2}')
+        rows=$(echo "$line" | awk '{print $4}')
+        data_size=$(echo "$line" | awk '{print $6}')
+        index_size=$(echo "$line" | awk '{print $8}')
+        if [ "$engine" = "MyISAM" ]; then
+            echo -e "  ${YELLOW}$db${NC}: ${WHITE}$engine${NC}, ${GREEN}$rows rows${NC}"
+        else
+            echo -e "  ${GREEN}$db${NC}: ${WHITE}$engine${NC}, ${GREEN}$rows rows${NC}"
+        fi
+    fi
+done | head -20
+
+# --------------------------------------------
+# 9. PERFORMANCE RECOMMENDATIONS
+# --------------------------------------------
+print_header "PERFORMANCE RECOMMENDATIONS"
+
+# Check key buffer hit ratio (MyISAM)
+key_reads=$(mysql -e "SHOW GLOBAL STATUS LIKE 'Key_reads';" 2>/dev/null | tail -1 | awk '{print $2}')
+key_read_req=$(mysql -e "SHOW GLOBAL STATUS LIKE 'Key_read_requests';" 2>/dev/null | tail -1 | awk '{print $2}')
+if [ -n "$key_reads" ] && [ -n "$key_read_req" ] && [ "$key_read_req" -gt 0 ]; then
+    key_hit=$(echo "scale=2; (1 - $key_reads / $key_read_req) * 100" | bc)
+    if [ "$(echo "$key_hit < 90" | bc)" -eq 1 ]; then
+        echo -e "  ${YELLOW}→${NC} Key read hit rate is low (${key_hit}%). Consider increasing key_buffer_size"
+    else
+        echo -e "  ${GREEN}✓${NC} Key read hit rate: ${key_hit}% (good)"
+    fi
+fi
+
+# Check query cache
+qcache_hits=$(mysql -e "SHOW GLOBAL STATUS LIKE 'Qcache_hits';" 2>/dev/null | tail -1 | awk '{print $2}')
+if [ -n "$qcache_hits" ]; then
+    qcache_inserts=$(mysql -e "SHOW GLOBAL STATUS LIKE 'Qcache_inserts';" 2>/dev/null | tail -1 | awk '{print $2}')
+    if [ -n "$qcache_inserts" ] && [ "$qcache_inserts" -gt 0 ]; then
+        qcache_rate=$(echo "scale=2; $qcache_hits / ($qcache_hits + $qcache_inserts) * 100" | bc)
+        if [ "$(echo "$qcache_rate > 50" | bc)" -eq 1 ]; then
+            echo -e "  ${GREEN}✓${NC} Query cache hit rate: ${qcache_rate}%"
+        else
+            echo -e "  ${YELLOW}→${NC} Query cache hit rate is low (${qcache_rate}%)"
+        fi
+    fi
+fi
+
+# Check open tables
+open_tables=$(mysql -e "SHOW GLOBAL STATUS LIKE 'Open_tables';" 2>/dev/null | tail -1 | awk '{print $2}')
+open_table_cache=$(mysql -e "SHOW GLOBAL VARIABLES LIKE 'table_open_cache';" 2>/dev/null | tail -1 | awk '{print $2}')
+if [ -n "$open_tables" ] && [ -n "$open_table_cache" ]; then
+    if [ "$open_tables" -eq "$open_table_cache" ]; then
+        echo -e "  ${YELLOW}→${NC} Table cache is full (${open_tables}/${open_table_cache}). Consider increasing table_open_cache"
+    else
+        echo -e "  ${GREEN}✓${NC} Table cache: ${open_tables}/${open_table_cache}"
+    fi
+fi
+
+# Check slow queries
+slow_queries=$(mysql -e "SHOW GLOBAL STATUS LIKE 'Slow_queries';" 2>/dev/null | tail -1 | awk '{print $2}')
+if [ -n "$slow_queries" ] && [ "$slow_queries" -gt 10 ]; then
+    echo -e "  ${YELLOW}→${NC} $slow_queries slow queries detected. Enable slow query log for analysis"
+fi
+
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✓ MySQL health check complete${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"

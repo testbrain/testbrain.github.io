@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Diff Checker — Dev Tools</title>
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="diff-checker.css" />
+</head>
+<body>
+    <div class="container container-wide">
+
+        <a class="back-link" href="../index.html">← Home</a>
+
+        <header class="header">
+            <h1>≠ Diff Checker</h1>
+            <p class="subtitle">Compare two blocks of text, line by line</p>
+        </header>
+
+        <div class="diff-inputs">
+            <div class="diff-input-col">
+                <label class="field-label" for="oldText">Original</label>
+                <textarea id="oldText" class="diff-textarea" placeholder="Paste original text..."></textarea>
+            </div>
+            <div class="diff-input-col">
+                <label class="field-label" for="newText">Changed</label>
+                <textarea id="newText" class="diff-textarea" placeholder="Paste changed text..."></textarea>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn btn-primary" id="compareBtn">⚖ Compare</button>
+            <button class="btn" id="swapBtn">↔ Swap</button>
+            <button class="btn" id="clearBtn">× Clear</button>
+        </div>
+
+        <div class="diff-stats" id="diffStats"></div>
+
+        <div class="diff-result">
+            <div class="diff-empty visible" id="diffEmpty">
+                <div class="icon">⇄</div>
+                <p>Paste text in both boxes and click Compare</p>
+            </div>
+            <div class="diff-panes-header" id="diffPanesHeader">
+                <span class="pane-title">Original</span>
+                <span class="pane-title">Changed</span>
+            </div>
+            <div class="diff-lines" id="diffLines"></div>
+        </div>
+
+        <footer class="footer">
+            <p>See exactly what changed — nothing more, nothing less.</p>
+        </footer>
+
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="diff-checker.js"></script>
+</body>
+</html>

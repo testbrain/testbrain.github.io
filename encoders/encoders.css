@@ -1,0 +1,259 @@
+.container-wide { max-width: 1000px; }
+
+/* ----- TABS ----- */
+.tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--border-soft);
+    padding-bottom: 12px;
+}
+
+.tab-btn {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.tab-btn:hover { border-color: var(--blue); color: var(--text); }
+
+.tab-btn.active {
+    background: linear-gradient(135deg, var(--blue), #34d399);
+    border-color: transparent;
+    color: #000000;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ----- SHARED FIELD STYLES ----- */
+.field-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: block;
+}
+
+.io-textarea {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    padding: 14px;
+    outline: none;
+    margin-bottom: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.io-textarea:focus, .io-input:focus, .io-select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+}
+
+.io-input, .io-select {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.85rem;
+    padding: 9px 12px;
+    outline: none;
+}
+
+.io-input-full { width: 100%; margin-bottom: 14px; }
+
+.btn-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.io-output-wrap { position: relative; margin-bottom: 10px; }
+
+.io-output {
+    width: 100%;
+    min-height: 100px;
+    resize: vertical;
+    background: var(--bg-inset);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    color: var(--text-bright);
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    padding: 14px;
+    padding-right: 90px;
+    outline: none;
+}
+
+.io-output-single { min-height: auto; padding: 14px 90px 14px 14px; font-size: 1.2rem; letter-spacing: 0.5px; }
+
+/* ----- MODE TOGGLE (Encode / Decode switch) ----- */
+.mode-toggle {
+    display: inline-flex;
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    margin-bottom: 12px;
+    gap: 3px;
+}
+
+.mode-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.mode-btn.active {
+    background: linear-gradient(135deg, var(--blue), #34d399);
+    color: #06281c;
+}
+
+.io-copy {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+/* ----- HASH ----- */
+.hash-list { display: flex; flex-direction: column; gap: 10px; }
+
+.hash-row {
+    background: var(--bg-inset);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+
+.hash-row .hash-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--blue);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.hash-row .hash-value {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.95rem;
+    color: var(--text);
+    word-break: break-all;
+}
+
+/* ----- TIMESTAMP ----- */
+.ts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.ts-col .btn-row { margin-bottom: 12px; }
+
+.ts-result {
+    margin-top: 12px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    color: var(--text);
+    line-height: 1.8;
+    min-height: 20px;
+}
+
+.ts-result .row-label { color: var(--text-muted); margin-right: 8px; }
+
+/* ----- UUID ----- */
+.uuid-label { margin-bottom: 0; }
+.uuid-count { width: 80px; }
+
+.uuid-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.uuid-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.95rem;
+}
+
+.uuid-row span { flex: 1; color: var(--text); word-break: break-all; }
+
+/* ----- PASSWORD ----- */
+.pw-controls { margin-bottom: 16px; }
+.pw-controls input[type="range"] { width: 100%; margin: 8px 0 16px; accent-color: var(--blue); }
+
+.pw-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px 16px;
+    margin-bottom: 16px;
+    font-size: 0.82rem;
+    color: var(--text);
+}
+
+.pw-options label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+.pw-strength { font-size: 0.8rem; color: var(--text-muted); }
+.pw-strength .bar {
+    height: 6px;
+    border-radius: 3px;
+    margin: 8px 0 6px;
+    background: var(--border-soft);
+    overflow: hidden;
+}
+.pw-strength .bar-fill { height: 100%; transition: width 0.2s, background 0.2s; }
+
+/* ----- QR CODE ----- */
+.qr-preview {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.qr-empty { color: var(--text-muted); font-size: 0.85rem; }
+
+#qrCanvasHolder { background: #fff; padding: 12px; border-radius: 8px; display: none; }
+#qrCanvasHolder.visible { display: block; }
+
+@media (max-width: 700px) {
+    .ts-grid { grid-template-columns: 1fr; }
+    .pw-options { grid-template-columns: 1fr; }
+}

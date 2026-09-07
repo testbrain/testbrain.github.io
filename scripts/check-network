@@ -1,0 +1,275 @@
+#!/bin/bash
+
+# ============================================
+# Network Diagnostics Script
+# Comprehensive network information and testing
+# ============================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+print_header() {
+    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${WHITE}  $1${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+print_info() {
+    printf "${GREEN}►${NC} ${CYAN}%-20s${NC} %s\n" "$1:" "$2"
+}
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+clear
+echo -e "${WHITE}"
+echo "════════════════════════════════════════════════════════════"
+echo "      🌐  NETWORK DIAGNOSTICS REPORT                        "
+echo "════════════════════════════════════════════════════════════"
+echo -e "${NC}"
+
+# --------------------------------------------
+# 1. NETWORK INTERFACES
+# --------------------------------------------
+print_header "NETWORK INTERFACES"
+
+ip -br addr | while read line; do
+    interface=$(echo "$line" | awk '{print $1}')
+    state=$(echo "$line" | awk '{print $2}')
+    ip=$(echo "$line" | awk '{print $3}')
+    if [ "$state" = "UP" ]; then
+        echo -e "  ${GREEN}$interface${NC}: ${WHITE}$state${NC} - ${CYAN}$ip${NC}"
+    else
+        echo -e "  ${YELLOW}$interface${NC}: ${WHITE}$state${NC}"
+    fi
+done
+
+# Interface details
+echo -e "\n${CYAN}►${NC} ${WHITE}Interface details:${NC}"
+for iface in $(ip link show | grep -v lo | grep -E "^[0-9]+:" | awk -F': ' '{print $2}'); do
+    if [ -n "$iface" ]; then
+        mac=$(ip link show "$iface" 2>/dev/null | grep ether | awk '{print $2}')
+        speed=$(ethtool "$iface" 2>/dev/null | grep Speed | awk '{print $2}')
+        [ -n "$mac" ] && echo -e "  ${CYAN}$iface${NC}: MAC=${WHITE}$mac${NC} ${YELLOW}$speed${NC}"
+    fi
+done
+
+# --------------------------------------------
+# 2. IP ADDRESSES
+# --------------------------------------------
+print_header "IP ADDRESSES"
+
+# IPv4
+echo -e "${CYAN}►${NC} ${WHITE}IPv4 Addresses:${NC}"
+ip -4 addr show | grep -v "127.0.0.1" | grep inet | awk '{print "  " $2}' | while read line; do
+    echo -e "  ${GREEN}$line${NC}"
+done
+
+# IPv6
+echo -e "\n${CYAN}►${NC} ${WHITE}IPv6 Addresses:${NC}"
+ip -6 addr show | grep -v "::1" | grep inet6 | awk '{print "  " $2}' | while read line; do
+    echo -e "  ${PURPLE}$line${NC}"
+done
+
+# Public IP
+echo -e "\n${CYAN}►${NC} ${WHITE}Public IP:${NC}"
+public_ip=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 icanhazip.com 2>/dev/null)
+if [ -n "$public_ip" ]; then
+    echo -e "  ${GREEN}$public_ip${NC}"
+else
+    echo -e "  ${YELLOW}Could not determine public IP${NC}"
+fi
+
+# --------------------------------------------
+# 3. ROUTING TABLE
+# --------------------------------------------
+print_header "ROUTING TABLE"
+
+echo -e "${CYAN}►${NC} ${WHITE}Default gateway:${NC}"
+ip route | grep default | while read line; do
+    echo -e "  ${GREEN}$line${NC}"
+done
+
+echo -e "\n${CYAN}►${NC} ${WHITE}Routing table:${NC}"
+ip route | grep -v default | head -10 | while read line; do
+    echo -e "  $line"
+done
+
+# --------------------------------------------
+# 4. DNS CONFIGURATION
+# --------------------------------------------
+print_header "DNS CONFIGURATION"
+
+# DNS servers
+echo -e "${CYAN}►${NC} ${WHITE}DNS Servers:${NC}"
+grep nameserver /etc/resolv.conf 2>/dev/null | while read line; do
+    echo -e "  ${GREEN}$line${NC}"
+done
+
+# Hosts file
+echo -e "\n${CYAN}►${NC} ${WHITE}Hosts file entries:${NC}"
+grep -v "^#" /etc/hosts 2>/dev/null | grep -v "^$" | while read line; do
+    echo -e "  $line"
+done
+
+# DNS resolution test
+echo -e "\n${CYAN}►${NC} ${WHITE}DNS resolution test:${NC}"
+for domain in "google.com" "github.com" "stackoverflow.com"; do
+    ip=$(dig +short "$domain" 2>/dev/null | head -1)
+    if [ -n "$ip" ]; then
+        echo -e "  ${GREEN}$domain${NC} -> ${CYAN}$ip${NC}"
+    else
+        echo -e "  ${RED}$domain${NC} -> ${YELLOW}Failed${NC}"
+    fi
+done
+
+# --------------------------------------------
+# 5. CONNECTIONS & PORTS
+# --------------------------------------------
+print_header "CONNECTIONS & PORTS"
+
+# Listening ports
+echo -e "${CYAN}►${NC} ${WHITE}Listening ports:${NC}"
+ss -tulpn 2>/dev/null | grep LISTEN | awk '{print $5}' | cut -d: -f2 | sort -n | uniq | while read port; do
+    service=$(ss -tulpn 2>/dev/null | grep ":$port" | head -1 | awk '{print $7}' | cut -d'(' -f2 | cut -d')' -f1)
+    echo -e "  ${YELLOW}Port $port${NC} -> ${WHITE}${service:-unknown}${NC}"
+done
+
+# Established connections
+echo -e "\n${CYAN}►${NC} ${WHITE}Established connections (top 10):${NC}"
+ss -tunp 2>/dev/null | grep ESTAB | head -10 | while read line; do
+    echo -e "  $line"
+done
+
+# Connection counts
+echo -e "\n${CYAN}►${NC} ${WHITE}Connection counts:${NC}"
+total_est=$(ss -tunp 2>/dev/null | grep -c ESTAB)
+total_listen=$(ss -tulpn 2>/dev/null | grep -c LISTEN)
+total_timewait=$(ss -tunp 2>/dev/null | grep -c TIME-WAIT)
+echo -e "  ${GREEN}Established:${NC} $total_est"
+echo -e "  ${YELLOW}Listening:${NC} $total_listen"
+echo -e "  ${PURPLE}Time-Wait:${NC} $total_timewait"
+
+# --------------------------------------------
+# 6. LATENCY TEST
+# --------------------------------------------
+print_header "LATENCY TEST"
+
+test_hosts=("8.8.8.8" "1.1.1.1" "9.9.9.9")
+
+for host in "${test_hosts[@]}"; do
+    ping_result=$(ping -c 3 -W 2 "$host" 2>/dev/null | tail -1 | awk '{print $4}' | cut -d'/' -f2)
+    if [ -n "$ping_result" ]; then
+        if [ "$(echo "$ping_result < 50" | bc)" -eq 1 ]; then
+            echo -e "  ${GREEN}$host${NC}: ${WHITE}${ping_result}ms${NC} (excellent)"
+        elif [ "$(echo "$ping_result < 150" | bc)" -eq 1 ]; then
+            echo -e "  ${YELLOW}$host${NC}: ${WHITE}${ping_result}ms${NC} (good)"
+        else
+            echo -e "  ${RED}$host${NC}: ${WHITE}${ping_result}ms${NC} (slow)"
+        fi
+    else
+        echo -e "  ${RED}$host${NC}: ${YELLOW}unreachable${NC}"
+    fi
+done
+
+# --------------------------------------------
+# 7. BANDWIDTH TEST (simple)
+# --------------------------------------------
+print_header "BANDWIDTH TEST (quick)"
+
+# Download speed test (small file)
+echo -e "${CYAN}►${NC} ${WHITE}Download speed:${NC}"
+start=$(date +%s%N)
+curl -s --max-time 5 -o /dev/null http://speedtest.tele2.net/1MB.zip 2>/dev/null
+end=$(date +%s%N)
+if [ -n "$start" ] && [ -n "$end" ]; then
+    time_sec=$(echo "scale=2; ($end - $start) / 1000000000" | bc)
+    if [ "$(echo "$time_sec > 0" | bc)" -eq 1 ]; then
+        speed=$(echo "scale=2; 1 / $time_sec" | bc)
+        echo -e "  ${GREEN}${speed} MB/s${NC}"
+    fi
+else
+    echo -e "  ${YELLOW}Speed test unavailable${NC}"
+fi
+
+# --------------------------------------------
+# 8. NETWORK STATISTICS
+# --------------------------------------------
+print_header "NETWORK STATISTICS"
+
+# Interface statistics
+echo -e "${CYAN}►${NC} ${WHITE}Interface stats (RX/TX):${NC}"
+for iface in $(ip link show | grep -v lo | grep -E "^[0-9]+:" | awk -F': ' '{print $2}'); do
+    rx=$(ip -s link show "$iface" 2>/dev/null | grep -A1 "RX:" | tail -1 | awk '{print $1}')
+    tx=$(ip -s link show "$iface" 2>/dev/null | grep -A1 "TX:" | tail -1 | awk '{print $1}')
+    if [ -n "$rx" ] && [ -n "$tx" ]; then
+        rx_h=$(numfmt --to=iec "$rx" 2>/dev/null || echo "$rx")
+        tx_h=$(numfmt --to=iec "$tx" 2>/dev/null || echo "$tx")
+        echo -e "  ${CYAN}$iface${NC}: RX=${GREEN}${rx_h}${NC} TX=${PURPLE}${tx_h}${NC}"
+    fi
+done
+
+# Packet loss
+echo -e "\n${CYAN}►${NC} ${WHITE}Packet statistics:${NC}"
+netstat -s 2>/dev/null | grep -E "packets|segments" | head -10
+
+# --------------------------------------------
+# 9. NETWORK PERFORMANCE SUMMARY
+# --------------------------------------------
+print_header "NETWORK PERFORMANCE SUMMARY"
+
+score=0
+max_score=10
+
+# Check connectivity
+if [ -n "$public_ip" ]; then
+    score=$((score + 2))
+fi
+
+# Check DNS
+if nslookup google.com &>/dev/null; then
+    score=$((score + 2))
+fi
+
+# Check latency
+for host in "${test_hosts[@]}"; do
+    if ping -c 1 -W 2 "$host" &>/dev/null; then
+        score=$((score + 2))
+        break
+    fi
+done
+
+# Check interfaces
+iface_count=$(ip link show | grep -c "UP")
+if [ "$iface_count" -gt 0 ]; then
+    score=$((score + 2))
+fi
+
+echo -e "\n${WHITE}Network Health Score:${NC} ${score}/${max_score}"
+
+if [ "$score" -ge 8 ]; then
+    echo -e "${GREEN}✓ Network is healthy${NC}"
+elif [ "$score" -ge 5 ]; then
+    echo -e "${YELLOW}⚠ Network has issues${NC}"
+else
+    echo -e "${RED}✗ Network needs attention${NC}"
+fi
+
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✓ Network diagnostics complete${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"

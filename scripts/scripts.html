@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Server Scripts — Dev Tools</title>
+    <link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+    <div class="container">
+
+        <a class="back-link" href="../index.html">← Home</a>
+
+        <!-- HEADER -->
+        <header class="header">
+            <h1>🛠️ Server Scripts</h1>
+            <p class="subtitle">One-command scripts for your server</p>
+            <div class="stats">
+                <span>⚒ <span class="num" id="tool-count">0</span> tools</span>
+                <span>⚡︎ Copy &amp; run instantly</span>
+                <span>🧹 Auto-cleanup</span>
+            </div>
+        </header>
+
+        <!-- SEARCH -->
+        <div class="search-container">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Search tools..." />
+            <button class="search-clear" id="searchClear">✕</button>
+        </div>
+
+        <!-- TOOL GRID -->
+        <div class="tool-grid" id="tool-grid">
+            <!-- Tools will be rendered here by JavaScript -->
+        </div>
+
+        <!-- NO RESULTS -->
+        <div class="no-results" id="noResults">
+            <div class="icon">🔎</div>
+            <p>No tools found</p>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="footer">
+            <p>One-liners for the boring parts of server admin.</p>
+        </footer>
+
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="toast"></div>
+
+    <script src="scripts.js"></script>
+</body>
+</html>

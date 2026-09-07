@@ -1,0 +1,206 @@
+#!/bin/bash
+
+# ============================================
+# Process Monitoring Script
+# Comprehensive process and resource monitoring
+# ============================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+print_header() {
+    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${WHITE}  $1${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+print_info() {
+    printf "${GREEN}►${NC} ${CYAN}%-20s${NC} %s\n" "$1:" "$2"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+clear
+echo -e "${WHITE}"
+echo "════════════════════════════════════════════════════════════"
+echo "      📊  PROCESS MONITORING REPORT                         "
+echo "════════════════════════════════════════════════════════════"
+echo -e "${NC}"
+
+# --------------------------------------------
+# 1. PROCESS SUMMARY
+# --------------------------------------------
+print_header "PROCESS SUMMARY"
+
+total_procs=$(ps aux | wc -l)
+running_procs=$(ps aux | grep -c " R ")
+sleeping_procs=$(ps aux | grep -c " S ")
+zombie_procs=$(ps aux | grep -c " Z ")
+stopped_procs=$(ps aux | grep -c " T ")
+
+print_info "Total Processes" "$total_procs"
+print_info "Running" "$running_procs"
+print_info "Sleeping" "$sleeping_procs"
+print_info "Zombie" "$zombie_procs"
+print_info "Stopped" "$stopped_procs"
+
+if [ "$zombie_procs" -gt 0 ]; then
+    print_warning "Zombie processes detected: $zombie_procs"
+fi
+
+# --------------------------------------------
+# 2. TOP CPU PROCESSES
+# --------------------------------------------
+print_header "TOP 10 CPU PROCESSES"
+
+ps aux --sort=-%cpu | head -11 | while read line; do
+    if echo "$line" | grep -q "USER"; then
+        echo -e "${BLUE}$line${NC}"
+    else
+        cpu=$(echo "$line" | awk '{print $3}')
+        mem=$(echo "$line" | awk '{print $4}')
+        user=$(echo "$line" | awk '{print $1}')
+        pid=$(echo "$line" | awk '{print $2}')
+        cmd=$(echo "$line" | awk '{for(i=11;i<=NF;i++) printf "%s ", $i; print ""}' | cut -c1-50)
+        
+        if [ "$(echo "$cpu > 50" | bc)" -eq 1 ]; then
+            echo -e "  ${RED}CPU: ${cpu}%${NC} ${YELLOW}MEM: ${mem}%${NC} ${WHITE}$user${NC} (PID:$pid) ${CYAN}$cmd${NC}"
+        elif [ "$(echo "$cpu > 20" | bc)" -eq 1 ]; then
+            echo -e "  ${YELLOW}CPU: ${cpu}%${NC} ${YELLOW}MEM: ${mem}%${NC} ${WHITE}$user${NC} (PID:$pid) ${CYAN}$cmd${NC}"
+        else
+            echo -e "  ${GREEN}CPU: ${cpu}%${NC} ${YELLOW}MEM: ${mem}%${NC} ${WHITE}$user${NC} (PID:$pid) ${CYAN}$cmd${NC}"
+        fi
+    fi
+done
+
+# --------------------------------------------
+# 3. TOP MEMORY PROCESSES
+# --------------------------------------------
+print_header "TOP 10 MEMORY PROCESSES"
+
+ps aux --sort=-%mem | head -11 | while read line; do
+    if echo "$line" | grep -q "USER"; then
+        echo -e "${BLUE}$line${NC}"
+    else
+        cpu=$(echo "$line" | awk '{print $3}')
+        mem=$(echo "$line" | awk '{print $4}')
+        user=$(echo "$line" | awk '{print $1}')
+        pid=$(echo "$line" | awk '{print $2}')
+        cmd=$(echo "$line" | awk '{for(i=11;i<=NF;i++) printf "%s ", $i; print ""}' | cut -c1-50)
+        
+        if [ "$(echo "$mem > 20" | bc)" -eq 1 ]; then
+            echo -e "  ${RED}MEM: ${mem}%${NC} ${YELLOW}CPU: ${cpu}%${NC} ${WHITE}$user${NC} (PID:$pid) ${CYAN}$cmd${NC}"
+        elif [ "$(echo "$mem > 10" | bc)" -eq 1 ]; then
+            echo -e "  ${YELLOW}MEM: ${mem}%${NC} ${YELLOW}CPU: ${cpu}%${NC} ${WHITE}$user${NC} (PID:$pid) ${CYAN}$cmd${NC}"
+        else
+            echo -e "  ${GREEN}MEM: ${mem}%${NC} ${YELLOW}CPU: ${cpu}%${NC} ${WHITE}$user${NC} (PID:$pid) ${CYAN}$cmd${NC}"
+        fi
+    fi
+done
+
+# --------------------------------------------
+# 4. SYSTEM PROCESSES
+# --------------------------------------------
+print_header "SYSTEM PROCESSES"
+
+# Kernel processes
+echo -e "${CYAN}►${NC} ${WHITE}Kernel processes:${NC}"
+ps aux | grep "\[" | head -10 | while read line; do
+    echo -e "  $line"
+done
+
+# Systemd processes
+echo -e "\n${CYAN}►${NC} ${WHITE}Systemd processes:${NC}"
+ps aux | grep systemd | grep -v grep | head -10 | while read line; do
+    echo -e "  $line"
+done
+
+# --------------------------------------------
+# 5. PROCESS TREE (top few)
+# --------------------------------------------
+print_header "PROCESS TREE"
+
+echo -e "${CYAN}►${NC} ${WHITE}Top process tree:${NC}"
+pstree -p 2>/dev/null | head -20
+
+# --------------------------------------------
+# 6. RESOURCE USAGE BY TYPE
+# --------------------------------------------
+print_header "RESOURCE USAGE BY TYPE"
+
+# CPU usage by user
+echo -e "${CYAN}►${NC} ${WHITE}CPU usage by user:${NC}"
+ps aux | awk '{print $1}' | sort | uniq -c | sort -rn | head -10 | while read count user; do
+    echo -e "  ${GREEN}$user${NC}: ${WHITE}$count processes${NC}"
+done
+
+# Memory usage by user
+echo -e "\n${CYAN}►${NC} ${WHITE}Memory usage by user:${NC}"
+ps aux | awk '{print $1, $4}' | sort | awk '{mem[$1]+=$2} END {for(user in mem) print user, mem[user]}' | sort -rnk2 | head -10 | while read user mem; do
+    echo -e "  ${GREEN}$user${NC}: ${WHITE}${mem}%${NC}"
+done
+
+# --------------------------------------------
+# 7. PROCESS CHECK BY SERVICE
+# --------------------------------------------
+print_header "SERVICE PROCESS CHECK"
+
+services=("nginx" "httpd" "apache2" "mysql" "mariadb" "postgresql" "redis" "mongodb" "node" "java" "docker" "php-fpm")
+
+for svc in "${services[@]}"; do
+    count=$(ps aux | grep -v grep | grep -c "$svc")
+    if [ "$count" -gt 0 ]; then
+        echo -e "  ${GREEN}$svc${NC}: ${WHITE}$count processes${NC}"
+    fi
+done
+
+# --------------------------------------------
+# 8. PROCESS RECOMMENDATIONS
+# --------------------------------------------
+print_header "RECOMMENDATIONS"
+
+# Check for high CPU
+high_cpu=$(ps aux --sort=-%cpu | head -2 | tail -1 | awk '{print $3}')
+if [ -n "$high_cpu" ] && [ "$(echo "$high_cpu > 80" | bc)" -eq 1 ]; then
+    echo -e "  ${YELLOW}→${NC} High CPU usage detected (${high_cpu}%). Check top CPU processes"
+fi
+
+# Check for high memory
+high_mem=$(ps aux --sort=-%mem | head -2 | tail -1 | awk '{print $4}')
+if [ -n "$high_mem" ] && [ "$(echo "$high_mem > 40" | bc)" -eq 1 ]; then
+    echo -e "  ${YELLOW}→${NC} High memory usage detected (${high_mem}%). Check top memory processes"
+fi
+
+# Check for zombies
+if [ "$zombie_procs" -gt 0 ]; then
+    echo -e "  ${YELLOW}→${NC} Zombie processes found. Parent process may need to be restarted"
+    echo -e "  ${WHITE}Find and kill zombies:${NC} ps aux | grep 'Z' | awk '{print \$2}' | xargs kill -9"
+fi
+
+# Check for stopped processes
+if [ "$stopped_procs" -gt 0 ]; then
+    echo -e "  ${YELLOW}→${NC} $stopped_procs stopped processes found"
+    echo -e "  ${WHITE}Check with:${NC} ps aux | grep ' T '"
+fi
+
+# Check for orphaned processes
+orphaned=$(ps aux | grep -c "PPID")
+if [ "$orphaned" -gt 0 ]; then
+    echo -e "  ${YELLOW}→${NC} Orphaned processes may exist"
+fi
+
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✓ Process monitoring complete${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"

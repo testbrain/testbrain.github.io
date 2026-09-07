@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSON Viewer — Dev Tools</title>
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="json-viewer.css" />
+</head>
+<body class="viewer-page">
+
+    <div class="viewer-topbar">
+        <a class="viewer-back" href="json-formatter.html" title="Back to Formatter">←</a>
+        <h1 class="viewer-title">🧾 JSON Viewer</h1>
+        <div class="viewer-stats" id="jsonStats"><span>Waiting for data…</span></div>
+
+        <div class="viewer-search">
+            <input type="text" id="searchInput" placeholder="Search…" />
+            <span class="search-count" id="searchCount"></span>
+            <button class="search-clear" id="searchClear" title="Clear search">✕</button>
+            <button class="search-nav" id="searchPrev" title="Previous match (Shift+Enter)">▲</button>
+            <button class="search-nav" id="searchNext" title="Next match (Enter)">▼</button>
+        </div>
+
+        <div class="viewer-actions">
+            <button id="expandAllBtn" title="Expand All"><span class="icon">«»</span><span class="label"> Expand All</span></button>
+            <button id="collapseAllBtn" title="Collapse All"><span class="icon">»«</span><span class="label"> Collapse All</span></button>
+            <button id="copyBtn" title="Copy JSON"><span class="icon">⧉</span><span class="label"> Copy JSON</span></button>
+            <button id="downloadBtn" title="Download"><span class="icon">⬇︎</span><span class="label"> Download</span></button>
+        </div>
+    </div>
+
+    <div class="json-panel" id="jsonPanel">
+        <div class="json-empty" id="jsonEmpty">
+            <div class="icon">📭</div>
+            <p>No JSON data found. Go back and format something first.</p>
+        </div>
+        <div class="json-tree" id="jsonTree"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="json-viewer.js"></script>
+</body>
+</html>

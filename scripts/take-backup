@@ -1,0 +1,604 @@
+#!/bin/bash
+
+# ============================================
+# BACKUP SCRIPT CONFIGURATION
+# ============================================
+
+# ============================================
+# PROTOCOL SELECTION
+# Choose: "FTP" or "SFTP"
+# ============================================
+BACKUP_PROTOCOL="FTP"
+
+# ============================================
+# CONNECTION CONFIGURATION
+# ============================================
+BACKUP_HOST=""
+BACKUP_USER=""
+BACKUP_PASS=''
+BACKUP_PORT="21"                 # 21 for FTP, 22 for SFTP
+BACKUP_DIR="/backups"
+
+# ============================================
+# LOCAL CONFIGURATION
+# ============================================
+LOCAL_BACKUP_DIR="/tmp/backups"
+LOG_DIR="/var/log/backup-scripts"
+DELETE_LOCAL_AFTER_TRANSFER=false
+
+# ============================================
+# DELIMITER CONFIGURATION
+# ============================================
+DELIMITER="||||"
+
+# ============================================
+# PROJECTS CONFIGURATION
+# ============================================
+PROJECTS=(
+    "demo${DELIMITER}/www/wwwroot/demo"
+)
+
+# ============================================
+# DATABASES CONFIGURATION
+# ============================================
+DATABASES=(
+    "demo${DELIMITER}demo${DELIMITER}000000000${DELIMITER}127.0.0.1${DELIMITER}3306"
+)
+
+# ============================================
+# CRON CONFIGURATION
+# ============================================
+CRON_USER="root"
+
+# ============================================
+# EXCLUDE PATTERNS FOR BACKUP
+# ============================================
+EXCLUDE_PATTERNS=(
+    "node_modules"
+    "build"
+    "dist"
+    ".git"
+    "*.log"
+    "tmp"
+    "cache"
+    "vendor"
+    "__pycache__"
+    "*.pyc"
+    "*.pyo"
+    "*.class"
+    "target"
+    "*.o"
+    "*.obj"
+)
+
+# ============================================
+# SCRIPT FUNCTIONS
+# ============================================
+
+# Function to get current date for log file
+get_log_date() {
+    date +"%d-%m-%Y"
+}
+
+# Function to get timestamp for log entries
+get_timestamp() {
+    date +"%Y-%m-%d %H:%M:%S"
+}
+
+# Function to create log file path
+get_log_file() {
+    local log_date=$(get_log_date)
+    echo "${LOG_DIR}/backup-logs-${log_date}.log"
+}
+
+# Function to get formatted date for backup folder
+get_backup_folder_date() {
+    date +"%Y-%m-%d_%H-%M-%S"
+}
+
+# Function to log messages
+log_message() {
+    local log_file=$(get_log_file)
+    local timestamp=$(get_timestamp)
+    local level=$1
+    local message=$2
+    
+    mkdir -p "${LOG_DIR}"
+    echo "[${timestamp}] [${level}] ${message}" >> "${log_file}"
+    echo "[${timestamp}] [${level}] ${message}" >&2
+}
+
+# ============================================
+# CONNECTION TEST FUNCTION
+# ============================================
+
+test_connection() {
+    if [ "${BACKUP_PROTOCOL}" = "SFTP" ]; then
+        test_sftp_connection
+    else
+        test_ftp_connection
+    fi
+}
+
+# ============================================
+# FTP FUNCTIONS
+# ============================================
+
+test_ftp_connection() {
+    log_message "INFO" "Testing FTP connection to ${BACKUP_HOST}:${BACKUP_PORT}..."
+    
+    local test_file="/tmp/ftp_test_$$.txt"
+    echo "FTP Connection Test $(date)" > "${test_file}"
+    
+    if ftp -n -v ${BACKUP_HOST} ${BACKUP_PORT} <<EOF
+user ${BACKUP_USER} ${BACKUP_PASS}
+cd ${BACKUP_DIR}
+put ${test_file} test_connection.txt
+bye
+EOF
+    then
+        log_message "SUCCESS" "FTP connection test successful!"
+        rm -f "${test_file}"
+        return 0
+    else
+        log_message "ERROR" "FTP connection test failed!"
+        rm -f "${test_file}"
+        return 1
+    fi
+}
+
+create_ftp_directory() {
+    local remote_dir="$1"
+    
+    log_message "INFO" "Creating FTP directory: ${remote_dir}"
+    
+    if ftp -n -v ${BACKUP_HOST} ${BACKUP_PORT} <<EOF
+user ${BACKUP_USER} ${BACKUP_PASS}
+cd ${BACKUP_DIR}
+mkdir ${remote_dir}
+bye
+EOF
+    then
+        log_message "SUCCESS" "FTP directory created: ${remote_dir}"
+        return 0
+    else
+        log_message "WARNING" "FTP directory may already exist: ${remote_dir}"
+        return 0
+    fi
+}
+
+upload_to_ftp() {
+    local local_file="$1"
+    local remote_dir="$2"
+    local remote_name=$(basename "${local_file}")
+    
+    log_message "INFO" "Uploading ${remote_name} via FTP to: ${remote_dir}"
+    
+    create_ftp_directory "${remote_dir}"
+    
+    if ftp -n -v ${BACKUP_HOST} ${BACKUP_PORT} <<EOF
+user ${BACKUP_USER} ${BACKUP_PASS}
+cd ${BACKUP_DIR}
+cd ${remote_dir}
+binary
+put ${local_file} ${remote_name}
+bye
+EOF
+    then
+        log_message "SUCCESS" "Upload completed: ${remote_dir}/${remote_name}"
+        return 0
+    else
+        log_message "ERROR" "Upload failed: ${remote_name}"
+        return 1
+    fi
+}
+
+# ============================================
+# SFTP FUNCTIONS (Using RSYNC - Simple & Secure)
+# ============================================
+
+test_sftp_connection() {
+    log_message "INFO" "Testing SFTP connection to ${BACKUP_HOST}:${BACKUP_PORT}..."
+    
+    local test_file="/tmp/sftp_test_$$.txt"
+    echo "SFTP Connection Test $(date)" > "${test_file}"
+    
+    # Using rsync to test connection
+    if rsync -avz -e "ssh -p ${BACKUP_PORT} -o StrictHostKeyChecking=no" "${test_file}" ${BACKUP_USER}@${BACKUP_HOST}:${BACKUP_DIR}/test_connection.txt > /dev/null 2>&1; then
+        log_message "SUCCESS" "SFTP connection test successful!"
+        rm -f "${test_file}"
+        # Clean up test file on remote
+        ssh -p ${BACKUP_PORT} ${BACKUP_USER}@${BACKUP_HOST} "rm -f ${BACKUP_DIR}/test_connection.txt" 2>/dev/null
+        return 0
+    else
+        log_message "ERROR" "SFTP connection test failed!"
+        log_message "ERROR" "Please check:"
+        log_message "ERROR" "  1. Host: ${BACKUP_HOST}"
+        log_message "ERROR" "  2. Port: ${BACKUP_PORT}"
+        log_message "ERROR" "  3. Username: ${BACKUP_USER}"
+        log_message "ERROR" "  4. SSH key is set up: ssh-copy-id ${BACKUP_USER}@${BACKUP_HOST}"
+        rm -f "${test_file}"
+        return 1
+    fi
+}
+
+create_sftp_directory() {
+    local remote_dir="$1"
+    
+    log_message "INFO" "Creating SFTP directory: ${remote_dir}"
+    
+    # Create directory using SSH
+    ssh -p ${BACKUP_PORT} ${BACKUP_USER}@${BACKUP_HOST} "mkdir -p ${BACKUP_DIR}/${remote_dir}" 2>/dev/null
+    
+    if [ $? -eq 0 ]; then
+        log_message "SUCCESS" "SFTP directory created: ${remote_dir}"
+        return 0
+    else
+        log_message "WARNING" "SFTP directory may already exist: ${remote_dir}"
+        return 0
+    fi
+}
+
+upload_to_sftp() {
+    local local_file="$1"
+    local remote_dir="$2"
+    local remote_name=$(basename "${local_file}")
+    
+    log_message "INFO" "Uploading ${remote_name} via SFTP to: ${remote_dir}"
+    
+    # Create directory first
+    create_sftp_directory "${remote_dir}"
+    
+    # Upload using rsync - simple, efficient, and secure
+    if rsync -avz -e "ssh -p ${BACKUP_PORT} -o StrictHostKeyChecking=no" "${local_file}" ${BACKUP_USER}@${BACKUP_HOST}:${BACKUP_DIR}/${remote_dir}/${remote_name}; then
+        log_message "SUCCESS" "Upload completed: ${remote_dir}/${remote_name}"
+        return 0
+    else
+        log_message "ERROR" "Upload failed: ${remote_name}"
+        return 1
+    fi
+}
+
+# ============================================
+# WRAPPER FUNCTIONS (Auto-select protocol)
+# ============================================
+
+upload_to_backup() {
+    local local_file="$1"
+    local remote_dir="$2"
+    
+    if [ "${BACKUP_PROTOCOL}" = "SFTP" ]; then
+        upload_to_sftp "$local_file" "$remote_dir"
+    else
+        upload_to_ftp "$local_file" "$remote_dir"
+    fi
+}
+
+# ============================================
+# BACKUP FUNCTIONS
+# ============================================
+
+# Function to backup a single project
+backup_project() {
+    local project_name="$1"
+    local project_path="$2"
+    
+    log_message "INFO" "Starting backup for project: ${project_name}"
+    log_message "INFO" "Project path: ${project_path}"
+    
+    if [ ! -d "${project_path}" ]; then
+        log_message "ERROR" "Project directory ${project_path} does not exist for ${project_name}"
+        return 1
+    fi
+    
+    local backup_name="${project_name}_$(date +%Y%m%d_%H%M%S).tar.gz"
+    local backup_path="${LOCAL_BACKUP_DIR}/${backup_name}"
+    
+    local exclude_opts=""
+    for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+        exclude_opts="${exclude_opts} --exclude='${pattern}'"
+    done
+    
+    log_message "INFO" "Creating backup archive for ${project_name}..."
+    
+    local parent_dir=$(dirname "${project_path}")
+    local base_name=$(basename "${project_path}")
+    
+    if eval "tar -czf '${backup_path}' -C '${parent_dir}' ${exclude_opts} '${base_name}'"; then
+        local backup_size=$(du -h "${backup_path}" | cut -f1)
+        log_message "SUCCESS" "Project ${project_name} backup created: ${backup_name} (${backup_size})"
+        echo "${backup_path}"
+        return 0
+    else
+        log_message "ERROR" "Failed to create backup for ${project_name}"
+        return 1
+    fi
+}
+
+# Function to backup a single database
+backup_database() {
+    local db_name="$1"
+    local db_user="$2"
+    local db_password="$3"
+    local db_host="$4"
+    local db_port="$5"
+    
+    log_message "INFO" "Starting backup for database: ${db_name}"
+    log_message "INFO" "DB User: ${db_user}, Host: ${db_host}, Port: ${db_port}"
+    
+    local backup_name="${db_name}_$(date +%Y%m%d_%H%M%S).sql.gz"
+    local backup_path="${LOCAL_BACKUP_DIR}/${backup_name}"
+    
+    local mysql_config="/tmp/mysql_config_$$.cnf"
+    cat > "${mysql_config}" <<EOF
+[client]
+user="${db_user}"
+password="${db_password}"
+host="${db_host}"
+port="${db_port}"
+EOF
+    chmod 600 "${mysql_config}"
+    
+    if ! mysql --defaults-file="${mysql_config}" -e "SELECT 1" > /dev/null 2>&1; then
+        log_message "ERROR" "Cannot connect to database ${db_name} at ${db_host}:${db_port}"
+        rm -f "${mysql_config}"
+        return 1
+    fi
+    
+    log_message "INFO" "Creating database backup for ${db_name}..."
+    if mysqldump --defaults-file="${mysql_config}" \
+        --single-transaction --quick --lock-tables=false \
+        "${db_name}" | gzip > "${backup_path}"; then
+        local backup_size=$(du -h "${backup_path}" | cut -f1)
+        log_message "SUCCESS" "Database ${db_name} backup created: ${backup_name} (${backup_size})"
+        rm -f "${mysql_config}"
+        echo "${backup_path}"
+        return 0
+    else
+        log_message "ERROR" "Failed to create backup for database ${db_name}"
+        rm -f "${mysql_config}"
+        return 1
+    fi
+}
+
+# Function to backup crontab
+backup_crontab() {
+    log_message "INFO" "Starting crontab backup..."
+    
+    local backup_name="crontab_$(date +%Y%m%d_%H%M%S).txt"
+    local backup_path="${LOCAL_BACKUP_DIR}/${backup_name}"
+    
+    if [ "${CRON_USER}" = "all" ]; then
+        echo "# Backup of all crontabs - $(date)" > "${backup_path}"
+        for user in $(cut -f1 -d: /etc/passwd); do
+            if crontab -u "${user}" -l 2>/dev/null; then
+                echo -e "\n# CRON FOR USER: ${user}\n" >> "${backup_path}"
+                crontab -u "${user}" -l >> "${backup_path}" 2>/dev/null
+            fi
+        done
+    else
+        echo "# Backup of crontab for ${CRON_USER} - $(date)" > "${backup_path}"
+        if crontab -u "${CRON_USER}" -l >> "${backup_path}" 2>/dev/null; then
+            log_message "INFO" "Crontab for ${CRON_USER} backed up"
+        else
+            log_message "WARNING" "No crontab found for user ${CRON_USER}"
+            echo "# No crontab found for ${CRON_USER}" >> "${backup_path}"
+        fi
+    fi
+    
+    local backup_size=$(du -h "${backup_path}" | cut -f1)
+    log_message "SUCCESS" "Crontab backup created: ${backup_name} (${backup_size})"
+    echo "${backup_path}"
+    return 0
+}
+
+# Function to clean up local backup files
+cleanup_local_backups() {
+    local backup_file="$1"
+    
+    if [ "${DELETE_LOCAL_AFTER_TRANSFER}" = true ] && [ -f "${backup_file}" ]; then
+        rm -f "${backup_file}"
+        log_message "INFO" "Deleted local backup: $(basename ${backup_file})"
+    fi
+}
+
+# ============================================
+# MAIN BACKUP FUNCTION
+# ============================================
+
+run_backups() {
+    log_message "INFO" "========================================="
+    log_message "INFO" "Starting backup process"
+    log_message "INFO" "Protocol: ${BACKUP_PROTOCOL}"
+    log_message "INFO" "========================================="
+    
+    mkdir -p "${LOCAL_BACKUP_DIR}"
+    
+    local backup_folder_date=$(get_backup_folder_date)
+    local remote_backup_dir="${backup_folder_date}"
+    
+    log_message "INFO" "Backup folder on server: ${remote_backup_dir}"
+    
+    local backup_success=0
+    local backup_failed=0
+    local backup_files=()
+    
+    # Backup projects
+    log_message "INFO" "Processing project backups..."
+    for project in "${PROJECTS[@]}"; do
+        local project_name="${project%%${DELIMITER}*}"
+        local project_path="${project#*${DELIMITER}}"
+        
+        if result=$(backup_project "${project_name}" "${project_path}"); then
+            backup_files+=("${result}")
+            ((backup_success++))
+        else
+            ((backup_failed++))
+        fi
+    done
+    
+    # Backup databases
+    log_message "INFO" "Processing database backups..."
+    for database in "${DATABASES[@]}"; do
+        local remaining="${database}"
+        local db_name="${remaining%%${DELIMITER}*}"
+        remaining="${remaining#*${DELIMITER}}"
+        local db_user="${remaining%%${DELIMITER}*}"
+        remaining="${remaining#*${DELIMITER}}"
+        local db_password="${remaining%%${DELIMITER}*}"
+        remaining="${remaining#*${DELIMITER}}"
+        local db_host="${remaining%%${DELIMITER}*}"
+        remaining="${remaining#*${DELIMITER}}"
+        local db_port="${remaining}"
+        
+        if result=$(backup_database "${db_name}" "${db_user}" "${db_password}" "${db_host}" "${db_port}"); then
+            backup_files+=("${result}")
+            ((backup_success++))
+        else
+            ((backup_failed++))
+        fi
+    done
+    
+    # Backup crontab
+    log_message "INFO" "Processing crontab backup..."
+    if result=$(backup_crontab); then
+        backup_files+=("${result}")
+        ((backup_success++))
+    else
+        ((backup_failed++))
+    fi
+    
+    log_message "INFO" "========================================="
+    log_message "INFO" "Backup creation completed: ${backup_success} successful, ${backup_failed} failed"
+    log_message "INFO" "========================================="
+    
+    # Upload all backup files
+    if [ ${#backup_files[@]} -gt 0 ]; then
+        log_message "INFO" "Starting upload process via ${BACKUP_PROTOCOL}..."
+        local upload_success=0
+        local upload_failed=0
+        
+        for backup_file in "${backup_files[@]}"; do
+            if [ -f "${backup_file}" ]; then
+                if upload_to_backup "${backup_file}" "${remote_backup_dir}"; then
+                    ((upload_success++))
+                    cleanup_local_backups "${backup_file}"
+                else
+                    ((upload_failed++))
+                fi
+            else
+                log_message "WARNING" "Backup file not found: ${backup_file}"
+                ((upload_failed++))
+            fi
+        done
+        
+        log_message "INFO" "========================================="
+        log_message "INFO" "Upload completed: ${upload_success} successful, ${upload_failed} failed"
+        log_message "INFO" "All backups stored in: ${BACKUP_DIR}/${remote_backup_dir}"
+        log_message "INFO" "========================================="
+    else
+        log_message "WARNING" "No backup files created to upload"
+    fi
+    
+    log_message "INFO" "Backup process finished"
+}
+
+# ============================================
+# UTILITY FUNCTIONS
+# ============================================
+
+view_logs() {
+    local log_file=$(get_log_file)
+    if [ -f "${log_file}" ]; then
+        echo "========================================="
+        echo "Displaying logs from ${log_file}"
+        echo "========================================="
+        cat "${log_file}"
+    else
+        echo "No log file found for today (${log_file})"
+    fi
+}
+
+list_log_files() {
+    echo "Available log files:"
+    ls -la "${LOG_DIR}"/*backup-logs-*.log 2>/dev/null || echo "No log files found"
+}
+
+show_config() {
+    echo "========================================="
+    echo "Current Configuration"
+    echo "========================================="
+    echo ""
+    echo "Protocol: ${BACKUP_PROTOCOL}"
+    echo "Host: ${BACKUP_HOST}:${BACKUP_PORT}"
+    echo "User: ${BACKUP_USER}"
+    echo "Backup Directory: ${BACKUP_DIR}"
+    echo ""
+    echo "PROJECTS:"
+    for project in "${PROJECTS[@]}"; do
+        local project_name="${project%%${DELIMITER}*}"
+        local project_path="${project#*${DELIMITER}}"
+        echo "  - ${project_name}: ${project_path}"
+    done
+    echo ""
+    echo "DATABASES:"
+    for database in "${DATABASES[@]}"; do
+        local remaining="${database}"
+        local db_name="${remaining%%${DELIMITER}*}"
+        remaining="${remaining#*${DELIMITER}}"
+        local db_user="${remaining%%${DELIMITER}*}"
+        remaining="${remaining#*${DELIMITER}}"
+        local db_password="${remaining%%${DELIMITER}*}"
+        remaining="${remaining#*${DELIMITER}}"
+        local db_host="${remaining%%${DELIMITER}*}"
+        remaining="${remaining#*${DELIMITER}}"
+        local db_port="${remaining}"
+        echo "  - ${db_name} (${db_user}@${db_host}:${db_port})"
+    done
+    echo ""
+    echo "Local Backup Dir: ${LOCAL_BACKUP_DIR}"
+    echo "Log Dir: ${LOG_DIR}"
+}
+
+# ============================================
+# MAIN SCRIPT EXECUTION
+# ============================================
+
+show_usage() {
+    echo "Usage: $0 [OPTION]"
+    echo "Options:"
+    echo "  --backup      Run the backup process"
+    echo "  --test        Test connection (FTP or SFTP)"
+    echo "  --view-logs   View today's logs"
+    echo "  --list-logs   List all available log files"
+    echo "  --show-config Show current configuration"
+    echo "  --help        Show this help message"
+}
+
+case "$1" in
+    --backup|backup)
+        run_backups
+        ;;
+    --test|test)
+        test_connection
+        ;;
+    --view-logs|view-logs)
+        view_logs
+        ;;
+    --list-logs|list-logs)
+        list_log_files
+        ;;
+    --show-config|show-config)
+        show_config
+        ;;
+    --help|help|-h)
+        show_usage
+        ;;
+    *)
+        echo "Invalid option: $1"
+        show_usage
+        exit 1
+        ;;
+esac
+
+exit 0

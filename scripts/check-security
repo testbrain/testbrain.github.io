@@ -1,0 +1,386 @@
+#!/bin/bash
+
+# ============================================
+# Security Audit Script
+# Comprehensive security check for Linux servers
+# ============================================
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+print_header() {
+    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${WHITE}  $1${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+print_info() {
+    printf "${GREEN}►${NC} ${CYAN}%-20s${NC} %s\n" "$1:" "$2"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+clear
+echo -e "${WHITE}"
+echo "════════════════════════════════════════════════════════════"
+echo "      🔒  SECURITY AUDIT REPORT                            "
+echo "════════════════════════════════════════════════════════════"
+echo -e "${NC}"
+
+# --------------------------------------------
+# 1. USER SECURITY
+# --------------------------------------------
+print_header "USER SECURITY"
+
+# Root user check
+if [ "$EUID" -eq 0 ]; then
+    print_warning "Running as root user"
+else
+    print_success "Running as non-root user"
+fi
+
+# List users with UID 0 (should only be root)
+echo -e "\n${CYAN}►${NC} ${WHITE}Users with UID 0 (admin privileges):${NC}"
+awk -F: '$3==0 {print "  " $1}' /etc/passwd
+
+# List users with empty passwords
+echo -e "\n${CYAN}►${NC} ${WHITE}Users with empty passwords:${NC}"
+empty_pass=$(awk -F: '($2=="") {print "  " $1}' /etc/shadow 2>/dev/null)
+if [ -n "$empty_pass" ]; then
+    echo -e "$empty_pass"
+else
+    echo -e "  ${GREEN}None found${NC}"
+fi
+
+# Check password expiry
+echo -e "\n${CYAN}►${NC} ${WHITE}Password expiry warnings:${NC}"
+for user in $(getent passwd | awk -F: '$7!="/sbin/nologin" && $7!="/bin/false" {print $1}'); do
+    expiry=$(chage -l "$user" 2>/dev/null | grep "Password expires" | cut -d: -f2)
+    if echo "$expiry" | grep -q "never"; then
+        echo -e "  ${YELLOW}$user: Password never expires${NC}"
+    fi
+done
+
+# Last password changes
+echo -e "\n${CYAN}►${NC} ${WHITE}Last password changes (5 users):${NC}"
+lastlog | head -5 | while read line; do
+    echo "  $line"
+done
+
+# Sudo users
+echo -e "\n${CYAN}►${NC} ${WHITE}Users with sudo access:${NC}"
+grep -Po '^sudo.*:\K.*$' /etc/group 2>/dev/null | tr ',' '\n' | while read user; do
+    [ -n "$user" ] && echo "  $user"
+done
+
+# --------------------------------------------
+# 2. SSH SECURITY
+# --------------------------------------------
+print_header "SSH SECURITY"
+
+if [ -f /etc/ssh/sshd_config ]; then
+    # Root login
+    root_login=$(grep "^PermitRootLogin" /etc/ssh/sshd_config | awk '{print $2}')
+    if [ "$root_login" = "no" ]; then
+        print_success "Root login: Disabled"
+    else
+        print_warning "Root login: $root_login (should be 'no')"
+    fi
+
+    # Password authentication
+    pass_auth=$(grep "^PasswordAuthentication" /etc/ssh/sshd_config | awk '{print $2}')
+    if [ "$pass_auth" = "no" ]; then
+        print_success "Password authentication: Disabled (key-based only)"
+    else
+        print_warning "Password authentication: $pass_auth (should be 'no')"
+    fi
+
+    # Port
+    port=$(grep "^Port" /etc/ssh/sshd_config | awk '{print $2}')
+    if [ "$port" != "22" ]; then
+        print_info "SSH Port" "$port (custom)"
+    else
+        print_warning "SSH Port: 22 (default, consider changing)"
+    fi
+
+    # Protocol
+    protocol=$(grep "^Protocol" /etc/ssh/sshd_config | awk '{print $2}')
+    if [ "$protocol" = "2" ]; then
+        print_success "Protocol: SSH2 only"
+    else
+        print_warning "Protocol: $protocol (should be 2)"
+    fi
+
+    # Max auth tries
+    max_auth=$(grep "^MaxAuthTries" /etc/ssh/sshd_config | awk '{print $2}')
+    if [ -n "$max_auth" ] && [ "$max_auth" -le 3 ]; then
+        print_success "Max auth tries: $max_auth"
+    else
+        print_warning "Max auth tries: ${max_auth:-6} (recommend 3)"
+    fi
+
+    # AllowUsers/AllowGroups
+    allow_users=$(grep "^AllowUsers" /etc/ssh/sshd_config | cut -d' ' -f2-)
+    if [ -n "$allow_users" ]; then
+        print_info "Allowed Users" "$allow_users"
+    fi
+
+    # Check for weak ciphers
+    weak_ciphers=$(grep "^Ciphers" /etc/ssh/sshd_config | grep -E "3des-cbc|aes128-cbc|aes192-cbc|aes256-cbc")
+    if [ -n "$weak_ciphers" ]; then
+        print_warning "Weak ciphers detected"
+    fi
+else
+    print_warning "sshd_config not found"
+fi
+
+# --------------------------------------------
+# 3. FIREWALL STATUS
+# --------------------------------------------
+print_header "FIREWALL STATUS"
+
+# Check UFW
+if command -v ufw &>/dev/null; then
+    if ufw status | grep -q "Status: active"; then
+        print_success "UFW: Active"
+        echo -e "\n${CYAN}Rules:${NC}"
+        ufw status | grep -E "ALLOW|DENY" | head -10
+    else
+        print_warning "UFW: Inactive"
+    fi
+fi
+
+# Check Firewalld
+if command -v firewall-cmd &>/dev/null; then
+    if firewall-cmd --state 2>/dev/null | grep -q "running"; then
+        print_success "Firewalld: Active"
+        echo -e "\n${CYAN}Active zones:${NC}"
+        firewall-cmd --get-active-zones 2>/dev/null | head -10
+    else
+        print_warning "Firewalld: Inactive"
+    fi
+fi
+
+# Check iptables
+if command -v iptables &>/dev/null; then
+    if iptables -L -n | grep -q "Chain INPUT" && iptables -L -n | grep -q "Chain FORWARD"; then
+        print_info "iptables" "Configured"
+    else
+        print_warning "iptables: Not configured"
+    fi
+fi
+
+# Check open ports
+echo -e "\n${CYAN}►${NC} ${WHITE}Open ports (listening):${NC}"
+ss -tulpn 2>/dev/null | grep LISTEN | awk '{print $5}' | cut -d: -f2 | sort -n | uniq | while read port; do
+    service=$(ss -tulpn 2>/dev/null | grep ":$port" | head -1 | awk '{print $7}' | cut -d'(' -f2 | cut -d')' -f1)
+    echo -e "  ${YELLOW}Port $port${NC} -> ${WHITE}${service:-unknown}${NC}"
+done | head -20
+
+# --------------------------------------------
+# 4. FAILED LOGIN ATTEMPTS
+# --------------------------------------------
+print_header "FAILED LOGIN ATTEMPTS"
+
+# From auth log
+if [ -f /var/log/auth.log ]; then
+    failed_logins=$(grep "Failed password" /var/log/auth.log 2>/dev/null | wc -l)
+    echo -e "${CYAN}►${NC} ${WHITE}Total failed logins:${NC} $failed_logins"
+    
+    # Top offenders
+    echo -e "\n${CYAN}►${NC} ${WHITE}Top 10 failed login IPs:${NC}"
+    grep "Failed password" /var/log/auth.log 2>/dev/null | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn | head -10 | while read count ip; do
+        echo -e "  ${YELLOW}$count${NC} attempts from ${RED}$ip${NC}"
+    done
+elif [ -f /var/log/secure ]; then
+    failed_logins=$(grep "Failed password" /var/log/secure 2>/dev/null | wc -l)
+    echo -e "${CYAN}►${NC} ${WHITE}Total failed logins:${NC} $failed_logins"
+    
+    echo -e "\n${CYAN}►${NC} ${WHITE}Top 10 failed login IPs:${NC}"
+    grep "Failed password" /var/log/secure 2>/dev/null | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn | head -10 | while read count ip; do
+        echo -e "  ${YELLOW}$count${NC} attempts from ${RED}$ip${NC}"
+    done
+else
+    print_warning "No auth log found"
+fi
+
+# --------------------------------------------
+# 5. FILE PERMISSIONS
+# --------------------------------------------
+print_header "FILE PERMISSIONS"
+
+# Check critical files
+critical_files=("/etc/passwd" "/etc/shadow" "/etc/sudoers" "/etc/ssh/sshd_config" "/etc/fstab")
+
+for file in "${critical_files[@]}"; do
+    if [ -f "$file" ]; then
+        perms=$(stat -c "%a" "$file" 2>/dev/null)
+        owner=$(stat -c "%U" "$file" 2>/dev/null)
+        if [ "$perms" = "644" ] || [ "$perms" = "640" ] || [ "$perms" = "600" ]; then
+            print_success "$file: $perms ($owner)"
+        else
+            print_warning "$file: $perms ($owner) - check permissions"
+        fi
+    fi
+done
+
+# SUID/SGID files
+echo -e "\n${CYAN}►${NC} ${WHITE}SUID/SGID files (unusual ones):${NC}"
+find /usr/bin /usr/sbin /bin /sbin -type f -perm -4000 -o -perm -2000 2>/dev/null | grep -v -E "passwd|sudo|su|mount|umount|chsh|chfn|ping|screen|unix_chkpwd" | head -10
+
+# World writable files
+echo -e "\n${CYAN}►${NC} ${WHITE}World writable files (top 10):${NC}"
+find / -type f -perm -o+w 2>/dev/null | head -10
+
+# --------------------------------------------
+# 6. MALWARE/RKIT DETECTION
+# --------------------------------------------
+print_header "MALWARE & ROOTKIT DETECTION"
+
+# Check for suspicious processes
+echo -e "${CYAN}►${NC} ${WHITE}Suspicious process names:${NC}"
+suspicious_procs=$(ps aux | grep -iE "rootkit|backdoor|malware|exploit|shell|bind|reverse|cmd|nc|bash|crypto|miner" | grep -v grep)
+if [ -n "$suspicious_procs" ]; then
+    echo "$suspicious_procs"
+else
+    echo -e "  ${GREEN}None found${NC}"
+fi
+
+# Check for hidden files in user homes
+echo -e "\n${CYAN}►${NC} ${WHITE}Hidden files in /tmp:${NC}"
+hidden_tmp=$(find /tmp -type f -name ".*" 2>/dev/null | head -5)
+if [ -n "$hidden_tmp" ]; then
+    echo "$hidden_tmp"
+else
+    echo -e "  ${GREEN}None found${NC}"
+fi
+
+# Check for unusual cron jobs
+echo -e "\n${CYAN}►${NC} ${WHITE}Unusual cron jobs:${NC}"
+grep -v "^#" /etc/crontab 2>/dev/null | grep -v "^$" | while read line; do
+    echo "  $line"
+done
+
+# Check for suspicious network connections
+echo -e "\n${CYAN}►${NC} ${WHITE}Established external connections:${NC}"
+ss -tunp 2>/dev/null | grep ESTAB | grep -v "127.0.0.1" | head -10
+
+# --------------------------------------------
+# 7. PACKAGE SECURITY
+# --------------------------------------------
+print_header "PACKAGE SECURITY"
+
+# Check for vulnerable packages (if apt)
+if command -v apt &>/dev/null; then
+    print_info "Package Manager" "APT"
+    security_updates=$(apt list --upgradable 2>/dev/null | grep -i security | wc -l)
+    if [ "$security_updates" -gt 0 ]; then
+        print_warning "$security_updates security updates available"
+    else
+        print_success "No security updates pending"
+    fi
+fi
+
+# Check for vulnerable packages (if yum/dnf)
+if command -v yum &>/dev/null; then
+    print_info "Package Manager" "YUM/DNF"
+    security_updates=$(yum --security check-update 2>/dev/null | grep -c "Security")
+    if [ "$security_updates" -gt 0 ]; then
+        print_warning "$security_updates security updates available"
+    else
+        print_success "No security updates pending"
+    fi
+fi
+
+# --------------------------------------------
+# 8. LOGGING & AUDITING
+# --------------------------------------------
+print_header "LOGGING & AUDITING"
+
+# Check auditd
+if systemctl is-active --quiet auditd 2>/dev/null; then
+    print_success "Auditd: Running"
+else
+    print_warning "Auditd: Not running"
+fi
+
+# Check logrotate
+if systemctl is-active --quiet logrotate 2>/dev/null; then
+    print_success "Logrotate: Running"
+else
+    print_warning "Logrotate: Not running"
+fi
+
+# Check failed login attempts
+last_fail=$(lastb 2>/dev/null | head -1 | awk '{print $1, $2, $3}')
+if [ -n "$last_fail" ]; then
+    echo -e "\n${CYAN}►${NC} ${WHITE}Recent failed logins:${NC}"
+    lastb 2>/dev/null | head -5
+fi
+
+# --------------------------------------------
+# 9. SECURITY RECOMMENDATIONS
+# --------------------------------------------
+print_header "SECURITY RECOMMENDATIONS"
+
+security_score=0
+max_score=20
+
+[ "$EUID" -ne 0 ] && security_score=$((security_score + 2))
+
+if [ -f /etc/ssh/sshd_config ]; then
+    grep -q "^PermitRootLogin no" /etc/ssh/sshd_config && security_score=$((security_score + 2))
+    grep -q "^PasswordAuthentication no" /etc/ssh/sshd_config && security_score=$((security_score + 2))
+fi
+
+if command -v ufw &>/dev/null && ufw status | grep -q active; then
+    security_score=$((security_score + 2))
+elif command -v firewall-cmd &>/dev/null && firewall-cmd --state 2>/dev/null | grep -q running; then
+    security_score=$((security_score + 2))
+fi
+
+if [ -f /etc/passwd ] && [ -f /etc/shadow ]; then
+    security_score=$((security_score + 2))
+fi
+
+security_updates=$(apt list --upgradable 2>/dev/null | grep -i security | wc -l)
+[ "$security_updates" -eq 0 ] && security_score=$((security_score + 2))
+
+echo -e "\n${WHITE}Security Score:${NC} ${security_score}/${max_score}"
+
+if [ "$security_score" -ge 14 ]; then
+    echo -e "${GREEN}✓ System is secure${NC}"
+elif [ "$security_score" -ge 8 ]; then
+    echo -e "${YELLOW}⚠ System needs security improvements${NC}"
+else
+    echo -e "${RED}✗ System security needs immediate attention${NC}"
+fi
+
+echo -e "\n${WHITE}Recommendations:${NC}"
+
+[ "$EUID" -eq 0 ] && echo -e "  ${YELLOW}→${NC} Create a non-root user for daily operations"
+! grep -q "^PermitRootLogin no" /etc/ssh/sshd_config 2>/dev/null && echo -e "  ${YELLOW}→${NC} Disable SSH root login"
+! grep -q "^PasswordAuthentication no" /etc/ssh/sshd_config 2>/dev/null && echo -e "  ${YELLOW}→${NC} Disable SSH password authentication (use SSH keys)"
+! command -v ufw &>/dev/null || ! ufw status | grep -q active && echo -e "  ${YELLOW}→${NC} Enable firewall"
+[ "$security_updates" -gt 0 ] && echo -e "  ${YELLOW}→${NC} Install security updates"
+
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✓ Security audit complete${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
