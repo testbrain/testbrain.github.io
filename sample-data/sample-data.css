@@ -1,46 +1,3 @@
-.container-wide { max-width: 1100px; }
-
-/* ----- TABS (shared pattern with encoders.css) ----- */
-.tabs {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 22px;
-    border-bottom: 1px solid var(--border-soft);
-    padding-bottom: 12px;
-}
-
-.tab-btn {
-    background: var(--bg-soft);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
-}
-
-.tab-btn:hover { border-color: var(--blue); color: var(--text); }
-
-.tab-btn.active {
-    background: linear-gradient(135deg, var(--blue), #34d399);
-    border-color: transparent;
-    color: var(--bg-soft);
-}
-
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
-
-/* ----- SHARED FIELD STYLES ----- */
-.field-label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-    display: block;
-}
-
 .io-input, .io-select {
     background: var(--bg-soft);
     border: 1px solid var(--border);
@@ -52,7 +9,7 @@
 }
 
 .io-input:focus, .io-select:focus {
-    border-color: var(--blue);
+    border-color: var(--color-accent);
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
@@ -62,33 +19,6 @@
     gap: 10px;
     flex-wrap: wrap;
     margin-bottom: 18px;
-}
-
-.mode-toggle {
-    display: inline-flex;
-    background: var(--bg-inset);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 3px;
-    margin-bottom: 16px;
-    gap: 3px;
-}
-
-.mode-btn {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    padding: 6px 16px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-}
-
-.mode-btn.active {
-    background: linear-gradient(135deg, var(--blue), #34d399);
-    color: #06281c;
 }
 
 /* ----- FAKE DATA TABLE ----- */
@@ -201,26 +131,6 @@
     top: 10px;
     right: 10px;
 }
-
-.btn-copy {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    border: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s, transform 0.1s;
-    background: var(--bg-inset);
-    color: var(--text-muted);
-    white-space: nowrap;
-}
-
-.btn-copy:hover { border-color: var(--blue); color: var(--text); }
-.btn-copy:active { transform: scale(0.95); }
-.btn-copy.copied { background: var(--blue); border-color: var(--blue); color: #06281c; }
 
 @media (max-width: 700px) {
     .fd-table { font-size: 0.72rem; }

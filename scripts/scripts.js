@@ -279,7 +279,7 @@
                 const fullCmd = this.getAttribute('data-command');
 
                 if (!fullCmd) {
-                    showToast('❌ Error copying command');
+                    showToast('× Error copying command');
                     return;
                 }
 
@@ -290,14 +290,14 @@
                     this.innerHTML = '<span class="icon">✅</span> Copied!';
                     this.classList.add('copied');
 
-                    showToast('✅ Copied to clipboard');
+                    showToast('✓ Copied to clipboard');
 
                     setTimeout(() => {
                         this.innerHTML = originalText;
                         this.classList.remove('copied');
                     }, 2000);
                 } else {
-                    showToast('❌ Failed to copy');
+                    showToast('× Failed to copy');
                 }
             });
         });

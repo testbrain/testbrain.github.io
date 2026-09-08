@@ -158,11 +158,11 @@
         btn.addEventListener('click', async () => {
             const el = document.getElementById(btn.dataset.copyCode);
             const ok = await copyText(el.textContent);
-            showToast(ok ? '✅ Copied' : '❌ Failed to copy');
+            showToast(ok ? '✓ Copied' : '× Failed to copy');
         });
     });
 
-    applyColor('#10b981'); // initialize display
+    applyColor('#7c8cff'); // initialize display
 
     // ========== CONTRAST CHECKER ==========
     const fgNative = document.getElementById('fgNative');

@@ -127,11 +127,11 @@
     }
 
     function generateFakeData() {
-        const count = Math.min(500, Math.max(1, parseInt(fdCount.value, 10) || 1));
+        const count = Math.min(5000, Math.max(1, parseInt(fdCount.value, 10) || 1));
         fdData = [];
         for (let i = 1; i <= count; i++) fdData.push(generateEntry(i));
         renderFdTable();
-        showToast(`✅ Generated ${count} entries`);
+        showToast(`✓ Generated ${count} entries`);
     }
 
     document.getElementById('fdGenerateBtn').addEventListener('click', generateFakeData);
@@ -284,7 +284,7 @@
             const targetEl = document.getElementById(btn.dataset.copyTarget);
             if (!targetEl || !targetEl.value) { showToast('⚠️ Nothing to copy'); return; }
             const ok = await copyText(targetEl.value);
-            showToast(ok ? '✅ Copied to clipboard' : '❌ Failed to copy');
+            showToast(ok ? '✓ Copied to clipboard' : '× Failed to copy');
         });
     });
 

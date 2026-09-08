@@ -163,7 +163,7 @@
 
     document.getElementById('copyBtn').addEventListener('click', async () => {
         const ok = await copyToClipboard(rawString);
-        showToast(ok ? '✅ Copied formatted JSON' : '❌ Failed to copy');
+        showToast(ok ? '✓ Copied formatted JSON' : '× Failed to copy');
     });
 
     document.getElementById('downloadBtn').addEventListener('click', () => {

@@ -14,7 +14,7 @@
 <body>
     <div class="container container-wide">
 
-        <a class="back-link" href="../">← Home</a>
+        <a class="back-link" href="../">Home</a>
 
         <header class="header">
             <h1>Fake Data &amp; Lorem Ipsum</h1>
@@ -31,7 +31,7 @@
         <section class="tab-panel active" id="panel-fakedata">
             <div class="btn-row">
                 <label class="field-label fd-label" for="fdCount">How many entries?</label>
-                <input type="number" id="fdCount" class="io-input fd-count" value="10" min="1" max="500" />
+                <input type="number" id="fdCount" class="io-input fd-count" value="10" min="1" max="5000" />
                 <button class="btn btn-primary" id="fdGenerateBtn">🎲 Generate</button>
                 <button class="btn" id="fdDownloadJsonBtn">💾 Download JSON</button>
                 <button class="btn" id="fdDownloadCsvBtn">💾 Download CSV</button>
@@ -112,9 +112,8 @@
             </div>
 
             <div class="btn-row">
-                <button class="btn btn-primary" id="loremGenerateBtn">✨ Generate</button>
+                <button class="btn btn-primary" id="loremGenerateBtn">Generate</button>
             </div>
-
 
             <div class="io-output-wrap">
                 <textarea id="loremOutput" class="io-output lorem-textarea" readonly

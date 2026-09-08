@@ -44,7 +44,7 @@
             localStorage.setItem('devtools-json-data', JSON.stringify(parsed));
             window.open('json-viewer.html', '_blank');
         } catch (err) {
-            showError('❌ Invalid JSON: ' + err.message);
+            showError('× Invalid JSON: ' + err.message);
         }
     });
 

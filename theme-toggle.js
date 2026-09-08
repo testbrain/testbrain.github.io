@@ -67,7 +67,7 @@
 
         btn.addEventListener('mouseenter', () => {
             btn.style.transform = 'scale(1.08)';
-            btn.style.borderColor = 'var(--blue)';
+            btn.style.borderColor = 'var(--color-accent)';
         });
         btn.addEventListener('mouseleave', () => {
             btn.style.transform = 'scale(1)';

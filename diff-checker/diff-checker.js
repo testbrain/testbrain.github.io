@@ -5,6 +5,7 @@
     const newTextEl = document.getElementById('newText');
     const compareBtn = document.getElementById('compareBtn');
     const swapBtn = document.getElementById('swapBtn');
+    const loadSampleBtn = document.getElementById('loadSampleBtn');
     const clearBtn = document.getElementById('clearBtn');
     const statsEl = document.getElementById('diffStats');
     const linesEl = document.getElementById('diffLines');
@@ -469,6 +470,137 @@
         oldTextEl.value = newTextEl.value;
         newTextEl.value = tmp;
     });
+
+    loadSampleBtn.addEventListener('click', () => {
+        var sampleOld = `function add(a, b) {
+    return a + b;
+}
+
+function subtract(a, b) {
+    return a - b;
+}
+
+function multiply(a, b, c) {
+    return a * b * c;
+}
+
+function divide(a, b) {
+    if (b === 0) {
+        throw new Error("Cannot divide by zero");
+    }
+    return a / b;
+}
+
+function squareRoot(x) {
+    if (x < 0) {
+        throw new Error("Cannot take square root of negative number");
+    }
+    return Math.sqrt(x);
+}
+
+function factorial(n) {
+    if (n < 0) {
+        throw new Error("Cannot compute factorial of negative number");
+    }
+    if (n === 0 || n === 1) {
+        return 1;
+    }
+    let result = 1;
+    for (let i = 2; i <= n; i++) {
+        result *= i;
+    }
+    return result;
+}
+
+function fibonacci(n) {
+    if (n < 0) {
+        throw new Error("Cannot compute Fibonacci of negative number");
+    }
+    if (n === 0) return 0;
+    if (n === 1) return 1;
+    let a = 0, b = 1, temp;
+    for (let i = 2; i <= n; i++) {
+        temp = a + b;
+        a = b;
+        b = temp;
+    }
+    return b;
+}`; 
+
+        var sampleNew = `function add(a, b) {
+    return a + b;
+}
+
+function subtract(a, b) {
+    return a - b;
+}
+
+function multiply(a, b) {
+    return a * b;
+}
+
+function divide(a, b) {
+    if (b === 0) {
+        throw new Error("Cannot divide by zero");
+    }
+    return a / b;
+}
+
+function power(base, exponent) {
+    return Math.pow(base, exponent);
+}
+
+function squareRoot(x) {
+    if (x < 0) {
+        throw new Error("Cannot take square root of negative number");
+    }
+    return Math.sqrt(x);
+}
+
+function factorial(n) {
+    if (n < 0) {
+        throw new Error("Cannot compute factorial of negative number");
+    }
+    if (n === 0 || n === 1) {
+        return 1;
+    }
+    let result = 1;
+    for (let i = 2; i <= n; i++) {
+        result *= i;
+    }
+    return result;
+}
+
+function fibonacci(n) {
+    if (n < 0) {
+        throw new Error("Cannot compute Fibonacci of negative number");
+    }
+    if (n === 0) return 0;
+    if (n === 1) return 1;
+    let a = 0, b = 1, temp;
+    for (let i = 2; i <= n; i++) {
+        temp = a + b;
+        a = b;
+        b = temp;
+    }
+    return b;
+}
+
+function isPrime(num) {
+    if (num <= 1) return false;
+    for (let i = 2; i <= Math.sqrt(num); i++) {
+        if (num % i === 0) return false;
+    }
+    return true;
+}`;
+
+        oldTextEl.value = sampleOld;
+        newTextEl.value = sampleNew;
+        // analyze();
+        // activeHunkIndex = state.hunks.length > 0 ? 0 : null;
+        // render();
+        // if (activeHunkIndex !== null) scrollActiveIntoView();
+    })
 
     clearBtn.addEventListener('click', () => {
         oldTextEl.value = '';

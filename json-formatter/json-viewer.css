@@ -32,7 +32,7 @@ body.viewer-page {
     flex-shrink: 0;
     transition: color 0.2s;
 }
-.viewer-back:hover { color: var(--blue); }
+.viewer-back:hover { color: var(--color-accent); }
 
 .viewer-title {
     font-size: 0.9rem;
@@ -70,7 +70,7 @@ body.viewer-page {
     font-size: 0.78rem;
     outline: none;
 }
-.viewer-search input:focus { border-color: var(--blue); }
+.viewer-search input:focus { border-color: var(--color-accent); }
 
 .search-count {
     font-size: 0.7rem;
@@ -91,7 +91,7 @@ body.viewer-page {
     cursor: pointer;
     flex-shrink: 0;
 }
-.search-nav:hover { border-color: var(--blue); color: var(--text); }
+.search-nav:hover { border-color: var(--color-accent); color: var(--text); }
 .search-nav:disabled { opacity: 0.4; cursor: default; }
 .search-nav:disabled:hover { border-color: var(--border); color: var(--text-muted); }
 
@@ -133,7 +133,7 @@ body.viewer-page {
     cursor: pointer;
     transition: border-color 0.2s, color 0.2s;
 }
-.viewer-actions button:hover { border-color: var(--blue); color: var(--text); }
+.viewer-actions button:hover { border-color: var(--color-accent); color: var(--text); }
 
 /* ----- JSON PANEL: fills ALL remaining space, no matter the top bar's height ----- */
 .json-panel {

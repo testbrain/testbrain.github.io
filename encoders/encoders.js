@@ -53,7 +53,7 @@
                 return;
             }
             const ok = await copyText(targetEl.value);
-            showToast(ok ? '✅ Copied to clipboard' : '❌ Failed to copy');
+            showToast(ok ? '✓ Copied to clipboard' : '× Failed to copy');
         });
     });
 
@@ -159,7 +159,7 @@
             copyBtn.textContent = '📋 Copy';
             copyBtn.addEventListener('click', async () => {
                 const ok = await copyText(hex);
-                showToast(ok ? '✅ Copied ' + algo : '❌ Failed to copy');
+                showToast(ok ? '✓ Copied ' + algo : '× Failed to copy');
             });
             label.appendChild(copyBtn);
 
@@ -273,7 +273,7 @@
             copyBtn.textContent = '📋';
             copyBtn.addEventListener('click', async () => {
                 const ok = await copyText(id);
-                showToast(ok ? '✅ Copied' : '❌ Failed to copy');
+                showToast(ok ? '✓ Copied' : '× Failed to copy');
             });
 
             row.appendChild(span);
@@ -290,7 +290,7 @@
             return;
         }
         const ok = await copyText(ids.join('\n'));
-        showToast(ok ? '✅ Copied all UUIDs' : '❌ Failed to copy');
+        showToast(ok ? '✓ Copied all UUIDs' : '× Failed to copy');
     });
 
     renderUuids(); // show some on load
@@ -346,7 +346,7 @@
         let label, color, pct;
         if (entropy < 40) { label = 'Weak'; color = '#f87171'; pct = 25; }
         else if (entropy < 60) { label = 'Fair'; color = '#fbbf24'; pct = 50; }
-        else if (entropy < 90) { label = 'Strong'; color = '#10b981'; pct = 75; }
+        else if (entropy < 90) { label = 'Strong'; color = '#7c8cff'; pct = 75; }
         else { label = 'Very Strong'; color = '#8ab6f9'; pct = 100; }
 
         pwStrength.innerHTML = `
@@ -371,7 +371,7 @@
             return;
         }
         if (typeof QRCode === 'undefined') {
-            showToast('❌ QR library failed to load (check your connection)');
+            showToast('× QR library failed to load (check your connection)');
             return;
         }
 
