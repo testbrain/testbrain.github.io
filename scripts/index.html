@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <script>(function () { try { if (localStorage.getItem('devtools-theme') === 'light') { document.documentElement.setAttribute('data-theme', 'light'); } } catch (e) { } })();</script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Server Scripts — Dev Tools</title>
     <link rel="stylesheet" href="../style.css" />
 </head>
+
 <body>
     <div class="container">
 
@@ -13,7 +17,7 @@
 
         <!-- HEADER -->
         <header class="header">
-            <h1>🛠️ Server Scripts</h1>
+            <h1>Server Scripts</h1>
             <p class="subtitle">One-command scripts for your server</p>
             <div class="stats">
                 <span>⚒ <span class="num" id="tool-count">0</span> tools</span>
@@ -51,5 +55,8 @@
     <div id="toast" class="toast"></div>
 
     <script src="scripts.js"></script>
+
+    <script src="../theme-toggle.js"></script>
 </body>
+
 </html>

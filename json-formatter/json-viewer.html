@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <script>(function () { try { if (localStorage.getItem('devtools-theme') === 'light') { document.documentElement.setAttribute('data-theme', 'light'); } } catch (e) { } })();</script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JSON Viewer — Dev Tools</title>
     <link rel="stylesheet" href="../style.css" />
     <link rel="stylesheet" href="json-viewer.css" />
 </head>
+
 <body class="viewer-page">
 
     <div class="viewer-topbar">
@@ -23,10 +27,14 @@
         </div>
 
         <div class="viewer-actions">
-            <button id="expandAllBtn" title="Expand All"><span class="icon">«»</span><span class="label"> Expand All</span></button>
-            <button id="collapseAllBtn" title="Collapse All"><span class="icon">»«</span><span class="label"> Collapse All</span></button>
-            <button id="copyBtn" title="Copy JSON"><span class="icon">⧉</span><span class="label"> Copy JSON</span></button>
-            <button id="downloadBtn" title="Download"><span class="icon">⬇︎</span><span class="label"> Download</span></button>
+            <button id="expandAllBtn" title="Expand All"><span class="icon">«»</span><span class="label"> Expand
+                    All</span></button>
+            <button id="collapseAllBtn" title="Collapse All"><span class="icon">»«</span><span class="label"> Collapse
+                    All</span></button>
+            <button id="copyBtn" title="Copy JSON"><span class="icon">⧉</span><span class="label"> Copy
+                    JSON</span></button>
+            <button id="downloadBtn" title="Download"><span class="icon">⬇︎</span><span class="label">
+                    Download</span></button>
         </div>
     </div>
 
@@ -42,4 +50,7 @@
 
     <script src="json-viewer.js"></script>
 </body>
+
+<script src="../theme-toggle.js"></script>
+
 </html>

@@ -1,19 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <script>(function () { try { if (localStorage.getItem('devtools-theme') === 'light') { document.documentElement.setAttribute('data-theme', 'light'); } } catch (e) { } })();</script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Encoders & Generators — Dev Tools</title>
     <link rel="stylesheet" href="../style.css" />
     <link rel="stylesheet" href="encoders.css" />
 </head>
+
 <body>
     <div class="container container-wide">
 
         <a class="back-link" href="../">← Home</a>
 
         <header class="header">
-            <h1>🔑 Encoders &amp; Generators</h1>
+            <h1>Encoders &amp; Generators</h1>
             <p class="subtitle">Base64, URL, hashes, timestamps, UUIDs, passwords &amp; QR codes</p>
         </header>
 
@@ -115,7 +119,8 @@
             </div>
 
             <div class="io-output-wrap">
-                <input type="text" id="pwOutput" class="io-output io-output-single" readonly placeholder="Password appears here..." />
+                <input type="text" id="pwOutput" class="io-output io-output-single" readonly
+                    placeholder="Password appears here..." />
                 <button class="btn-copy io-copy" data-copy-target="pwOutput">📋 Copy</button>
             </div>
             <div class="pw-strength" id="pwStrength"></div>
@@ -124,7 +129,8 @@
         <!-- QR CODE -->
         <section class="tab-panel" id="panel-qrcode">
             <label class="field-label" for="qrInput">Text / URL</label>
-            <input type="text" id="qrInput" class="io-input io-input-full" placeholder="Enter text or URL to encode..." />
+            <input type="text" id="qrInput" class="io-input io-input-full"
+                placeholder="Enter text or URL to encode..." />
             <div class="btn-row">
                 <select id="qrSize" class="io-select">
                     <option value="128">128 × 128</option>
@@ -152,4 +158,7 @@
     <script src="qrcode.js"></script>
     <script src="encoders.js"></script>
 </body>
+
+<script src="../theme-toggle.js"></script>
+
 </html>

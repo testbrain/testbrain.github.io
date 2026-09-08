@@ -2,6 +2,9 @@
 <html lang="en">
 
 <head>
+
+    <script>(function () { try { if (localStorage.getItem('devtools-theme') === 'light') { document.documentElement.setAttribute('data-theme', 'light'); } } catch (e) { } })();</script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dev Tools</title>
@@ -20,12 +23,12 @@
         <!-- TOOL OPTIONS -->
         <div class="option-grid">
             <a class="option-card" href="scripts/">
-
-                <div class="option-icon"><svg width="24px" height="24px" viewBox="0 0 24 24" fill="none"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path d="M7 8L3 11.6923L7 16M17 8L21 11.6923L17 16M14 4L10 20" stroke="#FFFFFF" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg></div>
+                <div class="option-icon">
+                    <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 8L3 11.6923L7 16M17 8L21 11.6923L17 16M14 4L10 20" stroke="var(--text-bright)"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
                 <div class="option-body">
                     <div class="option-title">Server Scripts</div>
                     <div class="option-desc">One-command bash scripts to check &amp; maintain your server: system,
@@ -35,15 +38,16 @@
             </a>
 
             <a class="option-card" href="json-formatter/">
-                <div class="option-icon"><svg width="24px" height="24px" viewBox="0 0 24 24" fill="none"
-                        xmlns="http://www.w3.org/2000/svg">
+                <div class="option-icon">
+                    <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path
                             d="M14 19H16C17.1046 19 18 18.1046 18 17V14.5616C18 13.6438 18.6246 12.8439 19.5149 12.6213L21.0299 12.2425C21.2823 12.1794 21.2823 11.8206 21.0299 11.7575L19.5149 11.3787C18.6246 11.1561 18 10.3562 18 9.43845V5H14"
-                            stroke="#FFFFFF" stroke-width="2" />
+                            stroke="var(--text-bright)" stroke-width="2" />
                         <path
                             d="M10 5H8C6.89543 5 6 5.89543 6 7V9.43845C6 10.3562 5.37541 11.1561 4.48507 11.3787L2.97014 11.7575C2.71765 11.8206 2.71765 12.1794 2.97014 12.2425L4.48507 12.6213C5.37541 12.8439 6 13.6438 6 14.5616V19H10"
-                            stroke="#FFFFFF" stroke-width="2" />
-                    </svg></div>
+                            stroke="var(--text-bright)" stroke-width="2" />
+                    </svg>
+                </div>
                 <div class="option-body">
                     <div class="option-title">JSON Formatter</div>
                     <div class="option-desc">Paste raw JSON and view it as a clean, collapsible, syntax-highlighted tree
@@ -53,7 +57,7 @@
             </a>
 
             <a class="option-card" href="diff-checker/">
-                <div class="option-icon"><svg fill="#FFFFFF" width="24px" height="24px" viewBox="0 0 24 24"
+                <div class="option-icon"><svg fill="var(--text-bright)" width="24px" height="24px" viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg">
                         <path fill-rule="evenodd"
                             d="M13,2 C14.5976809,2 15.9036609,3.24891996 15.9949073,4.82372721 L16,5 L16,8 L19,8 C20.5976809,8 21.9036609,9.24891996 21.9949073,10.8237272 L22,11 L22,19 C22,20.5976809 20.75108,21.9036609 19.1762728,21.9949073 L19,22 L11,22 C9.40231912,22 8.09633912,20.75108 8.00509269,19.1762728 L8,19 L8,16 L5,16 C3.40231912,16 2.09633912,14.75108 2.00509269,13.1762728 L2,13 L2,5 C2,3.40231912 3.24891996,2.09633912 4.82372721,2.00509269 L5,2 L13,2 Z M19,10 L16,10 L16,13 C16,14.5976809 14.75108,15.9036609 13.1762728,15.9949073 L13,16 L10,16 L10,19 C10,19.5128358 10.3860402,19.9355072 10.8833789,19.9932723 L11,20 L19,20 C19.5128358,20 19.9355072,19.6139598 19.9932723,19.1166211 L20,19 L20,11 C20,10.4871642 19.6139598,10.0644928 19.1166211,10.0067277 L19,10 Z M13,4 L5,4 C4.48716416,4 4.06449284,4.38604019 4.00672773,4.88337887 L4,5 L4,13 C4,13.5128358 4.38604019,13.9355072 4.88337887,13.9932723 L5,14 L8,14 L8,11 C8,9.40231912 9.24891996,8.09633912 10.8237272,8.00509269 L11,8 L14,8 L14,5 C14,4.48716416 13.6139598,4.06449284 13.1166211,4.00672773 L13,4 Z" />
@@ -68,19 +72,72 @@
             <a class="option-card" href="encoders/">
                 <div class="option-icon"><svg width="24px" height="24px" viewBox="0 0 24 24" fill="none"
                         xmlns="http://www.w3.org/2000/svg">
-                        <path d="M11 22H16C19.5 22 21 20 21 17V7C21 4 19.5 2 16 2H8C4.5 2 3 4 3 7V14" stroke="#FFFFFF"
-                            stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
-                        <path opacity="0.4" d="M14.5 4.5V6.5C14.5 7.6 15.4 8.5 16.5 8.5H18.5" stroke="#FFFFFF"
-                            stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
-                        <path opacity="0.4" d="M4 17L2 19L4 21" stroke="#FFFFFF" stroke-width="1.5"
+                        <path d="M11 22H16C19.5 22 21 20 21 17V7C21 4 19.5 2 16 2H8C4.5 2 3 4 3 7V14"
+                            stroke="var(--text-bright)" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path opacity="0.4" d="M14.5 4.5V6.5C14.5 7.6 15.4 8.5 16.5 8.5H18.5"
+                            stroke="var(--text-bright)" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path opacity="0.4" d="M4 17L2 19L4 21" stroke="var(--text-bright)" stroke-width="1.5"
                             stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
-                        <path opacity="0.4" d="M7 17L9 19L7 21" stroke="#FFFFFF" stroke-width="1.5"
+                        <path opacity="0.4" d="M7 17L9 19L7 21" stroke="var(--text-bright)" stroke-width="1.5"
                             stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
                     </svg></div>
                 <div class="option-body">
                     <div class="option-title">Encoders &amp; Generators</div>
                     <div class="option-desc">Base64, URL encode, hashes, timestamps, UUIDs, passwords &amp; QR codes —
                         all in one place.</div>
+                </div>
+                <div class="option-arrow">→</div>
+            </a>
+
+            <a class="option-card" href="sample-data/">
+                <div class="option-icon">
+                    <svg width="24px" height="24px" viewBox="0 0 1024 1024" class="icon" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M135.460571 18.285714h600.137143c67.949714 0 123.099429 53.613714 123.099429 119.954286v623.250286c0 21.650286-12.361143 51.565714-27.794286 67.291428l-111.030857 112.201143c-15.36 15.579429-45.348571 28.16-67.437714 28.16H142.116571c-67.876571 0-123.099429-53.76-123.099428-120.027428V134.729143C19.017143 70.144 71.021714 18.285714 135.460571 18.285714zM672.182857 899.657143l115.785143-117.101714c3.584-3.657143 7.094857-12.434286 7.094857-18.139429V138.166857a58.514286 58.514286 0 0 0-59.465143-57.490286H145.700571a62.756571 62.756571 0 0 0-63.122285 62.756572v705.682286c0 31.744 26.624 57.636571 59.465143 57.636571h512.731428a28.745143 28.745143 0 0 0 17.408-7.168z m-8.411428-217.819429l131.949714 1.462857c17.481143 0 31.744 13.897143 31.817143 31.232a31.451429 31.451429 0 0 1-31.817143 31.158858l-131.949714-1.462858c-7.826286 0-13.897143 5.851429-13.897143 13.165715v150.162285a31.451429 31.451429 0 0 1-31.817143 31.158858 31.451429 31.451429 0 0 1-31.817143-31.158858v-150.162285c0-41.910857 34.669714-75.556571 77.531429-75.556572z m-340.992-136.045714a26.404571 26.404571 0 0 1-18.797715 44.982857 26.624 26.624 0 0 1-18.724571-7.606857L162.230857 461.531429a26.404571 26.404571 0 0 1 0-37.449143L285.257143 302.372571c10.24-10.166857 27.209143-10.166857 37.522286 0 10.313143 10.24 10.313143 26.404571 0 37.449143L218.697143 442.806857 322.779429 545.645714z m232.082285-205.970286a26.404571 26.404571 0 0 1 0-37.449143c10.313143-10.166857 27.282286-10.166857 37.595429 0l123.026286 121.709715a26.404571 26.404571 0 0 1 0 37.449143L592.457143 583.168a26.624 26.624 0 0 1-18.797714 7.606857 26.404571 26.404571 0 0 1-18.797715-45.056L659.017143 442.806857 554.861714 339.821714zM505.417143 261.12c13.531429 4.973714 20.48 19.894857 16.091428 33.938286L406.966857 608.036571a26.916571 26.916571 0 0 1-34.011428 15.945143 26.185143 26.185143 0 0 1-16.237715-34.011428l114.541715-312.978286a26.916571 26.916571 0 0 1 34.157714-15.872z"
+                            fill="var(--text-bright)" />
+                    </svg>
+                </div>
+                <div class="option-body">
+                    <div class="option-title">Fake Data &amp; Lorem Ipsum</div>
+                    <div class="option-desc">Generate realistic test data (JSON/CSV export) and placeholder text —
+                        classic Latin or corporate buzzword mode.</div>
+                </div>
+                <div class="option-arrow">→</div>
+            </a>
+
+            <a class="option-card" href="colors/">
+                <div class="option-icon">
+                    <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M14 12.5001C14 13.3285 13.3284 14.0001 12.5 14.0001C11.6716 14.0001 11 13.3285 11 12.5001C11 11.6717 11.6716 11.0001 12.5 11.0001C13.3284 11.0001 14 11.6717 14 12.5001Z"
+                            fill="var(--text-bright)" />
+                        <path
+                            d="M16.5 10.0001C17.3284 10.0001 18 9.32854 18 8.50011C18 7.67169 17.3284 7.00011 16.5 7.00011C15.6716 7.00011 15 7.67169 15 8.50011C15 9.32854 15.6716 10.0001 16.5 10.0001Z"
+                            fill="var(--text-bright)" />
+                        <path
+                            d="M13 6.50011C13 7.32854 12.3284 8.00011 11.5 8.00011C10.6716 8.00011 10 7.32854 10 6.50011C10 5.67169 10.6716 5.00011 11.5 5.00011C12.3284 5.00011 13 5.67169 13 6.50011Z"
+                            fill="var(--text-bright)" />
+                        <path
+                            d="M7.50001 12.0001C8.32844 12.0001 9.00001 11.3285 9.00001 10.5001C9.00001 9.67169 8.32844 9.00011 7.50001 9.00011C6.67158 9.00011 6.00001 9.67169 6.00001 10.5001C6.00001 11.3285 6.67158 12.0001 7.50001 12.0001Z"
+                            fill="var(--text-bright)" />
+                        <path
+                            d="M14 17.5001C14 18.3285 13.3284 19.0001 12.5 19.0001C11.6716 19.0001 11 18.3285 11 17.5001C11 16.6717 11.6716 16.0001 12.5 16.0001C13.3284 16.0001 14 16.6717 14 17.5001Z"
+                            fill="var(--text-bright)" />
+                        <path
+                            d="M7.50001 17.0001C8.32844 17.0001 9.00001 16.3285 9.00001 15.5001C9.00001 14.6717 8.32844 14.0001 7.50001 14.0001C6.67158 14.0001 6.00001 14.6717 6.00001 15.5001C6.00001 16.3285 6.67158 17.0001 7.50001 17.0001Z"
+                            fill="var(--text-bright)" />
+                        <path fill-rule="evenodd" clip-rule="evenodd"
+                            d="M11.5017 1.02215C15.4049 0.791746 19.5636 2.32444 21.8087 5.41131C22.5084 6.37324 22.8228 7.63628 22.6489 8.83154C22.471 10.054 21.7734 11.2315 20.4472 11.8945C19.6389 12.2987 18.7731 12.9466 18.2401 13.668C17.7158 14.3778 17.6139 14.9917 17.8944 15.5529C18.4231 16.6102 18.8894 17.9257 18.8106 19.1875C18.7699 19.8375 18.5828 20.4946 18.1664 21.0799C17.7488 21.6667 17.1448 22.1192 16.3714 22.4286C14.6095 23.1333 12.6279 23.1643 10.8081 22.8207C8.98579 22.4765 7.24486 21.7421 5.92656 20.8194C4.00568 19.4748 2.47455 17.6889 1.71371 15.4464C0.9504 13.1965 0.995912 10.5851 2.06024 7.65803C3.64355 3.30372 7.56248 1.25469 11.5017 1.02215ZM11.6196 3.01868C8.26589 3.21665 5.18483 4.9176 3.93984 8.34149C3.00414 10.9148 3.01388 13.0536 3.60768 14.8038C4.20395 16.5613 5.42282 18.0255 7.07347 19.1809C8.14405 19.9303 9.6169 20.5604 11.1792 20.8554C12.7442 21.151 14.3181 21.0959 15.6286 20.5716C16.308 20.2999 16.7678 19.8099 16.8145 19.0627C16.8606 18.3245 16.5769 17.3901 16.1056 16.4473C15.3639 14.9639 15.8542 13.5318 16.6315 12.4796C17.4002 11.4391 18.5455 10.6093 19.5528 10.1057C20.2266 9.76878 20.5747 9.19623 20.6697 8.54355C20.7686 7.86365 20.5831 7.12638 20.1913 6.58769C18.4364 4.17486 15.0093 2.81858 11.6196 3.01868Z"
+                            fill="var(--text-bright)" />
+                    </svg>
+                </div>
+                <div class="option-body">
+                    <div class="option-title">Color Tools</div>
+                    <div class="option-desc">Pick, convert between HEX/RGB/HSL, and check WCAG contrast ratios — all
+                        live.</div>
                 </div>
                 <div class="option-arrow">→</div>
             </a>
@@ -92,6 +149,8 @@
         </footer>
 
     </div>
+
+    <script src="theme-toggle.js"></script>
 </body>
 
 </html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script>(function () { try { if (localStorage.getItem('devtools-theme') === 'light') { document.documentElement.setAttribute('data-theme', 'light'); } } catch (e) { } })();</script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fake Data & Lorem Ipsum — Dev Tools</title>
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="sample-data.css" />
+</head>
+
+<body>
+    <div class="container container-wide">
+
+        <a class="back-link" href="../">← Home</a>
+
+        <header class="header">
+            <h1>Fake Data &amp; Lorem Ipsum</h1>
+            <p class="subtitle">Realistic-looking test data and placeholder text — nothing real, nothing leaves your
+                browser.</p>
+        </header>
+
+        <div class="tabs" id="tabs">
+            <button class="tab-btn active" data-tab="fakedata">Fake Data</button>
+            <button class="tab-btn" data-tab="lorem">Lorem Ipsum</button>
+        </div>
+
+        <!-- FAKE DATA -->
+        <section class="tab-panel active" id="panel-fakedata">
+            <div class="btn-row">
+                <label class="field-label fd-label" for="fdCount">How many entries?</label>
+                <input type="number" id="fdCount" class="io-input fd-count" value="10" min="1" max="500" />
+                <button class="btn btn-primary" id="fdGenerateBtn">🎲 Generate</button>
+                <button class="btn" id="fdDownloadJsonBtn">💾 Download JSON</button>
+                <button class="btn" id="fdDownloadCsvBtn">💾 Download CSV</button>
+            </div>
+
+            <div class="fd-table-wrap">
+                <table class="fd-table" id="fdTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Address</th>
+                            <th>Phone</th>
+                            <th>Website</th>
+                            <th>Age</th>
+                            <th>Gender</th>
+                            <th>Country</th>
+                            <th>State</th>
+                            <th>City</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fdTableBody">
+                        <tr>
+                            <td class="fd-empty" colspan="13">Click "Generate" to create sample entries</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- LOREM IPSUM -->
+        <section class="tab-panel" id="panel-lorem">
+            <div class="btn-row">
+                <label class="field-label lorem-inline-label" for="loremStyle">Style</label>
+                <select id="loremStyle" class="io-select">
+                    <option value="classic">Classic Latin</option>
+                    <option value="buzzword">Corporate Buzzword 💼</option>
+                    <option value="pirate">Pirate Speak 🏴‍☠️</option>
+                    <option value="hacker">Hacker/Tech 💻</option>
+                    <option value="cat">Cat Ipsum 🐱</option>
+                    <option value="bacon">Bacon Ipsum 🥓</option>
+                </select>
+
+                <label class="field-label lorem-inline-label" for="loremType">Type</label>
+                <select id="loremType" class="io-select">
+                    <option value="words">Words</option>
+                    <option value="sentences">Sentences</option>
+                    <option value="paragraphs" selected>Paragraphs</option>
+                </select>
+
+                <input type="number" id="loremCount" class="io-input lorem-count" value="3" min="1" max="50" />
+            </div>
+
+            <div class="lorem-advanced">
+                <div class="lorem-range-group">
+                    <label class="field-label">Words per sentence</label>
+                    <div class="rgb-inputs lorem-range-inputs">
+                        <input type="number" id="loremWordsMin" class="io-input" value="6" min="2" max="30" />
+                        <span class="range-sep">–</span>
+                        <input type="number" id="loremWordsMax" class="io-input" value="14" min="2" max="30" />
+                    </div>
+                </div>
+                <div class="lorem-range-group">
+                    <label class="field-label">Sentences per paragraph</label>
+                    <div class="rgb-inputs lorem-range-inputs">
+                        <input type="number" id="loremSentMin" class="io-input" value="4" min="1" max="20" />
+                        <span class="range-sep">–</span>
+                        <input type="number" id="loremSentMax" class="io-input" value="7" min="1" max="20" />
+                    </div>
+                </div>
+                <div class="lorem-checks">
+                    <label><input type="checkbox" id="loremOpener" checked /> Start with themed opening phrase</label>
+                    <label><input type="checkbox" id="loremHtml" /> Wrap output in HTML &lt;p&gt; tags</label>
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" id="loremGenerateBtn">✨ Generate</button>
+            </div>
+
+
+            <div class="io-output-wrap">
+                <textarea id="loremOutput" class="io-output lorem-textarea" readonly
+                    placeholder="Generated text appears here..."></textarea>
+                <button class="btn-copy io-copy" data-copy-target="loremOutput">📋 Copy</button>
+            </div>
+            <div class="lorem-stats" id="loremStats"></div>
+        </section>
+
+        <footer class="footer">
+            <p>Fake names, fake emails, real convenience.</p>
+        </footer>
+
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="sample-data.js"></script>
+</body>
+
+<script src="../theme-toggle.js"></script>
+
+</html>

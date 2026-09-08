@@ -1,19 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <script>(function () { try { if (localStorage.getItem('devtools-theme') === 'light') { document.documentElement.setAttribute('data-theme', 'light'); } } catch (e) { } })();</script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Diff Checker — Dev Tools</title>
     <link rel="stylesheet" href="../style.css" />
     <link rel="stylesheet" href="diff-checker.css" />
 </head>
+
 <body>
     <div class="container container-wide">
 
         <a class="back-link" href="../">← Home</a>
 
         <header class="header">
-            <h1>≠ Diff Checker</h1>
+            <h1>Diff Checker</h1>
             <p class="subtitle">Compare two blocks of text, line by line</p>
         </header>
 
@@ -58,4 +62,6 @@
 
     <script src="diff-checker.js"></script>
 </body>
+
+    <script src="../theme-toggle.js"></script>
 </html>

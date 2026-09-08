@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+    <script>(function () { try { if (localStorage.getItem('devtools-theme') === 'light') { document.documentElement.setAttribute('data-theme', 'light'); } } catch (e) { } })();</script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JSON Formatter — Dev Tools</title>
     <link rel="stylesheet" href="../style.css" />
     <style>
-        .editor-wrap { position: relative; margin-bottom: 16px; }
+        .editor-wrap {
+            position: relative;
+            margin-bottom: 16px;
+        }
 
         #jsonInput {
             width: 100%;
@@ -24,10 +30,21 @@
             transition: border-color 0.2s, box-shadow 0.2s;
         }
 
-        #jsonInput:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12); }
-        #jsonInput::placeholder { color: var(--text-muted); }
+        #jsonInput:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+        }
 
-        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+        #jsonInput::placeholder {
+            color: var(--text-muted);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
 
         .error-box {
             display: none;
@@ -41,23 +58,31 @@
             font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
         }
 
-        .error-box.visible { display: block; }
+        .error-box.visible {
+            display: block;
+        }
 
-        .hint { color: var(--text-muted); font-size: 0.8rem; margin-top: 10px; }
+        .hint {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
 
         <a class="back-link" href="../">← Home</a>
 
         <header class="header">
-            <h1>[ ] JSON Formatter</h1>
+            <h1>JSON Formatter</h1>
             <p class="subtitle">Paste raw JSON, then view it in a rich, collapsible tree</p>
         </header>
 
         <div class="editor-wrap">
-            <textarea id="jsonInput" placeholder='Paste raw JSON here, e.g. {"name": "Alex", "active": true, "roles": ["admin", "user"]}'></textarea>
+            <textarea id="jsonInput"
+                placeholder='Paste raw JSON here, e.g. {"name": "Alex", "active": true, "roles": ["admin", "user"]}'></textarea>
         </div>
 
         <div class="toolbar">
@@ -79,4 +104,7 @@
 
     <script src="json-formatter.js"></script>
 </body>
+
+<script src="../theme-toggle.js"></script>
+
 </html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script>(function () { try { if (localStorage.getItem('devtools-theme') === 'light') { document.documentElement.setAttribute('data-theme', 'light'); } } catch (e) { } })();</script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Color Tools — Dev Tools</title>
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="color-tools.css" />
+</head>
+
+<body>
+    <div class="container container-wide">
+
+        <a class="back-link" href="../">← Home</a>
+
+        <header class="header">
+            <h1>Color Tools</h1>
+            <p class="subtitle">Pick, convert, and check color contrast — all live, no button required.</p>
+        </header>
+
+        <div class="tabs" id="tabs">
+            <button class="tab-btn active" data-tab="picker">Picker &amp; Converter</button>
+            <button class="tab-btn" data-tab="contrast">Contrast Checker</button>
+        </div>
+
+        <!-- PICKER & CONVERTER -->
+        <section class="tab-panel active" id="panel-picker">
+            <div class="color-live-row">
+                <div style="position: relative; display: inline-block;">
+                    <input type="color" id="colorNative" class="color-native" value="#10b981"
+                        >
+                    <span class="color-picker-label">
+                        Pick Color
+                    </span>
+                </div>
+                <div class="color-preview-box" id="colorPreviewBox"></div>
+            </div>
+
+            <div class="color-fields-grid">
+                <div class="color-field">
+                    <label class="field-label" for="hexInput">HEX</label>
+                    <input type="text" id="hexInput" class="io-input color-input-full" value="#10b981" maxlength="7" />
+                </div>
+
+                <div class="color-field">
+                    <label class="field-label">RGB</label>
+                    <div class="rgb-inputs">
+                        <input type="number" id="rInput" class="io-input" min="0" max="255" value="16" />
+                        <input type="number" id="gInput" class="io-input" min="0" max="255" value="185" />
+                        <input type="number" id="bInput" class="io-input" min="0" max="255" value="129" />
+                    </div>
+                </div>
+
+                <div class="color-field">
+                    <label class="field-label">HSL</label>
+                    <div class="rgb-inputs">
+                        <input type="number" id="hInput" class="io-input" min="0" max="360" value="160" />
+                        <input type="number" id="sInput" class="io-input" min="0" max="100" value="84" />
+                        <input type="number" id="lInput" class="io-input" min="0" max="100" value="39" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="color-strings">
+                <div class="color-string-row">
+                    <code id="hexString">#10b981</code>
+                    <button class="btn-copy color-copy-btn" data-copy-code="hexString">📋 Copy</button>
+                </div>
+                <div class="color-string-row">
+                    <code id="rgbString">rgb(16, 185, 129)</code>
+                    <button class="btn-copy color-copy-btn" data-copy-code="rgbString">📋 Copy</button>
+                </div>
+                <div class="color-string-row">
+                    <code id="hslString">hsl(160, 84%, 39%)</code>
+                    <button class="btn-copy color-copy-btn" data-copy-code="hslString">📋 Copy</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTRAST CHECKER -->
+        <section class="tab-panel" id="panel-contrast">
+            <div class="contrast-grid">
+                <div class="contrast-col">
+                    <label class="field-label">Foreground (text)</label>
+                    <div class="color-live-row-sm">
+                        <input type="color" id="fgNative" value="#f5f4f2" />
+                        <input type="text" id="fgHex" class="io-input color-input-full" value="#f5f4f2" maxlength="7" />
+                    </div>
+                </div>
+
+                <div class="contrast-col">
+                    <label class="field-label">Background</label>
+                    <div class="color-live-row-sm">
+                        <input type="color" id="bgNative" value="#171412" />
+                        <input type="text" id="bgHex" class="io-input color-input-full" value="#171412" maxlength="7" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="contrast-preview" id="contrastPreview">
+                <span id="contrastSampleText">The quick brown fox jumps over the lazy dog — 0123456789</span>
+            </div>
+
+            <div class="contrast-result" id="contrastResult"></div>
+        </section>
+
+        <footer class="footer">
+            <p>HEX, RGB, HSL — same color, your choice of language.</p>
+        </footer>
+
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="color-tools.js"></script>
+</body>
+
+<script src="../theme-toggle.js"></script>
+
+</html>
